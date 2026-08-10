@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { configured, supabase } from './lib/supabase'
 import { ensureWorkspace } from './lib/data'
@@ -111,11 +111,11 @@ function ProtectedLayout() {
   }
   if (!workspace) return <div className="center-screen"><p>Could not load a workspace. Check the Supabase SQL and browser console.</p></div>
 
-  const value = useMemo<AppContextValue>(() => ({
+  const value: AppContextValue = {
     user: session.user,
     workspace,
     refreshWorkspace: () => loadWorkspace(session.user),
-  }), [session.user, workspace])
+  }
 
   return (
     <AppContext.Provider value={value}>
