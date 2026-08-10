@@ -28,7 +28,9 @@ export function useAppContext() {
 function ProtectedLayout() {
   const [session, setSession] = useState<Session | null>(null)
   const [workspace, setWorkspace] = useState<Workspace | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [authReady, setAuthReady] = useState(false)
+  const [workspaceLoading, setWorkspaceLoading] = useState(false)
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null)
   const location = useLocation()
 
   const loadWorkspace = async (user: User) => {
@@ -38,34 +40,75 @@ function ProtectedLayout() {
 
   useEffect(() => {
     let mounted = true
-    supabase.auth.getSession().then(async ({ data }) => {
+
+    supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return
+      if (error) setWorkspaceError(error.message)
       setSession(data.session)
-      if (data.session?.user) {
-        try {
-          await loadWorkspace(data.session.user)
-        } finally {
-          if (mounted) setLoading(false)
-        }
-      } else {
-        setLoading(false)
-      }
+      setAuthReady(true)
     })
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+
+    // Keep this callback synchronous. Awaiting Supabase requests inside
+    // onAuthStateChange can block on the auth client's internal lock.
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return
       setSession(nextSession)
-      if (nextSession?.user) await loadWorkspace(nextSession.user)
-      else setWorkspace(null)
-      setLoading(false)
+      setAuthReady(true)
     })
+
     return () => {
       mounted = false
       authListener.subscription.unsubscribe()
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (!authReady) return
+    if (!session?.user) {
+      setWorkspace(null)
+      setWorkspaceLoading(false)
+      setWorkspaceError(null)
+      return
+    }
+
+    setWorkspaceLoading(true)
+    setWorkspaceError(null)
+
+    ensureWorkspace(session.user.id, session.user.email)
+      .then((found) => {
+        if (!cancelled) setWorkspace(found)
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return
+        const message = error instanceof Error ? error.message : String(error)
+        console.error('Failed to load workspace:', error)
+        setWorkspace(null)
+        setWorkspaceError(message)
+      })
+      .finally(() => {
+        if (!cancelled) setWorkspaceLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [authReady, session?.user?.id])
+
   if (!configured) return <MissingConfig />
-  if (loading) return <div className="center-screen"><div className="spinner" /><p>Opening your workspace…</p></div>
+  if (!authReady || workspaceLoading) return <div className="center-screen"><div className="spinner" /><p>Opening your workspace…</p></div>
   if (!session?.user) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (workspaceError) {
+    return (
+      <div className="center-screen setup-card">
+        <div className="brand-mark">!</div>
+        <h1>Atlas could not open your workspace</h1>
+        <p>{workspaceError}</p>
+        <p>Check that <code>supabase/schema.sql</code> has been run in your Supabase SQL Editor, then refresh this page.</p>
+      </div>
+    )
+  }
   if (!workspace) return <div className="center-screen"><p>Could not load a workspace. Check the Supabase SQL and browser console.</p></div>
 
   const value = useMemo<AppContextValue>(() => ({
