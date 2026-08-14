@@ -56,6 +56,12 @@ export async function createField(databaseId: string, field: Pick<Field, 'name' 
   return data as Field
 }
 
+export async function updateField(fieldId: string, patch: Partial<Pick<Field, 'name' | 'type' | 'required' | 'config' | 'position'>>) {
+  const { data, error } = await supabase.from('fields').update(patch).eq('id', fieldId).select('*').single()
+  if (error) throw error
+  return data as Field
+}
+
 export async function deleteField(fieldId: string) {
   const { error } = await supabase.from('fields').delete().eq('id', fieldId)
   if (error) throw error
