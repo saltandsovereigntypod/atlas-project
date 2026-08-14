@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Brush, Image as ImageIcon, Kanban, LayoutGrid, MoreHorizontal, Plus, Search, Settings2, Table2, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { createField, createRecord, deleteDatabase, deleteField, deleteRecord, getDatabase, getFields, getRecords, updateRecord } from '../lib/data'
+import RecordCanvas from '../components/RecordCanvas'
+import { createField, createRecord, deleteDatabase, deleteField, deleteRecord, getDatabase, getFields, getLayoutElements, getOrCreateLayout, getRecords, updateRecord } from '../lib/data'
 import { displayValue } from '../lib/value'
-import type { Database, Field, FieldType, RecordRow } from '../types'
+import type { Database, Field, FieldType, Layout, LayoutElement, RecordRow } from '../types'
 
 const fieldTypes: { value: FieldType; label: string }[] = [
   { value: 'text', label: 'Text' }, { value: 'long_text', label: 'Long text' }, { value: 'number', label: 'Number' },
@@ -20,6 +21,8 @@ export default function DatabasePage() {
   const [database, setDatabase] = useState<Database | null>(null)
   const [fields, setFields] = useState<Field[]>([])
   const [records, setRecords] = useState<RecordRow[]>([])
+  const [layout, setLayout] = useState<Layout | null>(null)
+  const [layoutElements, setLayoutElements] = useState<LayoutElement[]>([])
   const [query, setQuery] = useState('')
   const [showFieldForm, setShowFieldForm] = useState(false)
   const [showViewSettings, setShowViewSettings] = useState(false)
@@ -29,29 +32,25 @@ export default function DatabasePage() {
   const [view, setView] = useState<ViewMode>(() => (localStorage.getItem(`atlas:view:${databaseId}`) as ViewMode) || 'table')
   const [galleryImageFieldId, setGalleryImageFieldId] = useState(() => localStorage.getItem(`atlas:gallery-image:${databaseId}`) || '')
   const [boardFieldId, setBoardFieldId] = useState(() => localStorage.getItem(`atlas:board-field:${databaseId}`) || '')
+  const [useDesignedGallery, setUseDesignedGallery] = useState(() => localStorage.getItem(`atlas:gallery-designed:${databaseId}`) !== 'false')
 
   const load = async () => {
-    const [db, f, r] = await Promise.all([getDatabase(databaseId), getFields(databaseId), getRecords(databaseId)])
+    const [db, f, r, l] = await Promise.all([getDatabase(databaseId), getFields(databaseId), getRecords(databaseId), getOrCreateLayout(databaseId)])
+    const designElements = await getLayoutElements(l.id)
     setDatabase(db)
     setFields(f)
     setRecords(r)
+    setLayout(l)
+    setLayoutElements(designElements)
     if (!galleryImageFieldId) setGalleryImageFieldId(f.find((field) => field.type === 'image')?.id || '')
     if (!boardFieldId) setBoardFieldId(f.find((field) => field.type === 'select')?.id || '')
   }
 
   useEffect(() => { load().catch((e) => alert(e.message)) }, [databaseId])
-
-  useEffect(() => {
-    localStorage.setItem(`atlas:view:${databaseId}`, view)
-  }, [databaseId, view])
-
-  useEffect(() => {
-    localStorage.setItem(`atlas:gallery-image:${databaseId}`, galleryImageFieldId)
-  }, [databaseId, galleryImageFieldId])
-
-  useEffect(() => {
-    localStorage.setItem(`atlas:board-field:${databaseId}`, boardFieldId)
-  }, [databaseId, boardFieldId])
+  useEffect(() => { localStorage.setItem(`atlas:view:${databaseId}`, view) }, [databaseId, view])
+  useEffect(() => { localStorage.setItem(`atlas:gallery-image:${databaseId}`, galleryImageFieldId) }, [databaseId, galleryImageFieldId])
+  useEffect(() => { localStorage.setItem(`atlas:board-field:${databaseId}`, boardFieldId) }, [databaseId, boardFieldId])
+  useEffect(() => { localStorage.setItem(`atlas:gallery-designed:${databaseId}`, String(useDesignedGallery)) }, [databaseId, useDesignedGallery])
 
   const contentFields = fields.filter((field) => field.position > 0 || field.name !== 'Name')
   const filtered = useMemo(() => {
@@ -68,6 +67,7 @@ export default function DatabasePage() {
   const galleryImageField = fields.find((field) => field.id === galleryImageFieldId)
   const boardField = fields.find((field) => field.id === boardFieldId)
   const boardOptions = boardField && Array.isArray(boardField.config.options) ? boardField.config.options.map(String) : []
+  const hasDesignedPage = Boolean(layout && layoutElements.length)
 
   const addRecord = async () => {
     const row = await createRecord(databaseId)
@@ -122,6 +122,17 @@ export default function DatabasePage() {
     return (
       <div className="gallery-grid">
         {filtered.map((record) => {
+          if (useDesignedGallery && hasDesignedPage && layout) {
+            return (
+              <Link className="gallery-card" to={`/database/${databaseId}/record/${record.id}`} key={record.id} style={{ overflow: 'hidden' }}>
+                <div style={{ width: '100%', overflow: 'hidden', background: layout.background, display: 'flex', justifyContent: 'center' }}>
+                  <RecordCanvas layout={layout} elements={layoutElements} fields={fields} record={record} maxWidth={300} className="gallery-designed-canvas" />
+                </div>
+                <div className="gallery-content"><h3>{record.title || 'Untitled'}</h3></div>
+              </Link>
+            )
+          }
+
           const image = galleryImageField ? String(record.data[galleryImageField.id] || '') : ''
           return (
             <Link className="gallery-card" to={`/database/${databaseId}/record/${record.id}`} key={record.id}>
@@ -193,7 +204,8 @@ export default function DatabasePage() {
       </div>
 
       {showViewSettings && <div className="view-settings">
-        <label>Gallery cover<select value={galleryImageFieldId} onChange={(e) => setGalleryImageFieldId(e.target.value)}><option value="">No cover image</option>{imageFields.map((field) => <option value={field.id} key={field.id}>{field.name}</option>)}</select></label>
+        {hasDesignedPage && <label className="checkbox-row"><input type="checkbox" checked={useDesignedGallery} onChange={(e) => setUseDesignedGallery(e.target.checked)} /> Use designed record page as gallery card</label>}
+        {!useDesignedGallery && <label>Gallery cover<select value={galleryImageFieldId} onChange={(e) => setGalleryImageFieldId(e.target.value)}><option value="">No cover image</option>{imageFields.map((field) => <option value={field.id} key={field.id}>{field.name}</option>)}</select></label>}
         <label>Board grouping<select value={boardFieldId} onChange={(e) => setBoardFieldId(e.target.value)}><option value="">Choose a Select property</option>{selectFields.map((field) => <option value={field.id} key={field.id}>{field.name}</option>)}</select></label>
       </div>}
 
