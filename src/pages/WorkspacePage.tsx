@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Columns2, Database, Heading, Image, LayoutGrid, List, Minus, PanelTop, Plus, Quote, Rows3, Trash2, Type } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppContext } from '../App'
@@ -80,7 +80,7 @@ function Block({block,databases,index,total,onMove,onChange,onDelete}:{block:Pag
   return <div className={`live-block ${block.type} block-width-${width}`}>{tools}<Tag className="editable-content" contentEditable suppressContentEditableWarning onBlur={e=>save({text:e.currentTarget.textContent||''})}>{String(config.text||'')}</Tag></div>
 }
 
-function DatabaseViewBlock({config,databases,save,tools}:{config:Record<string,unknown>;databases:DatabaseType[];save:(p:Record<string,unknown>)=>void;tools:React.ReactNode}){
+function DatabaseViewBlock({config,databases,save,tools}:{config:Record<string,unknown>;databases:DatabaseType[];save:(p:Record<string,unknown>)=>void;tools:ReactNode}){
   const databaseId=String(config.databaseId||'')
   const [records,setRecords]=useState<RecordRow[]>([])
   useEffect(()=>{if(!databaseId){setRecords([]);return}getRecords(databaseId).then(setRecords).catch(console.error)},[databaseId])
