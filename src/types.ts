@@ -1,4 +1,6 @@
 export type FieldType = 'text' | 'long_text' | 'number' | 'date' | 'checkbox' | 'select' | 'multi_select' | 'url' | 'image' | 'relation'
+export type ViewType = 'table' | 'gallery' | 'board'
+export type LayoutSurface = 'record' | 'gallery' | 'board'
 
 export interface Workspace {
   id: string
@@ -36,10 +38,23 @@ export interface RecordRow {
   updated_at: string
 }
 
+export interface DatabaseView {
+  id: string
+  database_id: string
+  name: string
+  type: ViewType
+  position: number
+  config: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
 export interface Layout {
   id: string
   database_id: string
   name: string
+  surface: LayoutSurface
+  record_id: string | null
   canvas_width: number
   canvas_height: number
   background: string
