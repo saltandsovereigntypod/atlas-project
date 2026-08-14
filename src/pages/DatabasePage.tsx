@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Brush, Image as ImageIcon, Kanban, LayoutGrid, MoreHorizontal, Plus, Search, Settings2, Table2, Trash2 } from 'lucide-react'
+import { Brush, Image as ImageIcon, Kanban, LayoutGrid, MoreHorizontal, Pencil, Plus, Search, Settings2, Table2, Trash2, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import RecordCanvas from '../components/RecordCanvas'
 import { useAppContext } from '../App'
 import {
   createField, createRecord, deleteDatabase, deleteField, deleteRecord, ensureDefaultViews, getDatabase, getDatabases,
-  getFields, getLayoutElements, getLayoutForSurface, getRecords, updateRecord, updateView,
+  getFields, getLayoutElements, getLayoutForSurface, getRecords, updateField, updateRecord, updateView,
 } from '../lib/data'
 import { displayValue } from '../lib/value'
 import type { Database, DatabaseView, Field, FieldType, Layout, LayoutElement, RecordRow } from '../types'
@@ -38,15 +38,25 @@ export default function DatabasePage() {
   const [newFieldType, setNewFieldType] = useState<FieldType>('text')
   const [newFieldOptions, setNewFieldOptions] = useState('')
   const [relationTarget, setRelationTarget] = useState('')
+  const [editingFieldId, setEditingFieldId] = useState<string | null>(null)
+  const [editFieldName, setEditFieldName] = useState('')
+  const [editFieldType, setEditFieldType] = useState<FieldType>('text')
+  const [editFieldOptions, setEditFieldOptions] = useState('')
+  const [editRelationTarget, setEditRelationTarget] = useState('')
 
   const load = async () => {
     const [db, f, r, savedViews, dbs, gallery, board] = await Promise.all([
       getDatabase(databaseId), getFields(databaseId), getRecords(databaseId), ensureDefaultViews(databaseId), getDatabases(workspace.id),
       getLayoutForSurface(databaseId, 'gallery'), getLayoutForSurface(databaseId, 'board'),
     ])
-    setDatabase(db); setFields(f); setRecords(r); setViews(savedViews); setAllDatabases(dbs)
+    setDatabase(db)
+    setFields(f)
+    setRecords(r)
+    setViews(savedViews)
+    setAllDatabases(dbs)
     setActiveViewId((current) => savedViews.some((v) => v.id === current) ? current : savedViews[0]?.id || '')
-    setGalleryLayout(gallery); setBoardLayout(board)
+    setGalleryLayout(gallery)
+    setBoardLayout(board)
     setGalleryElements(gallery ? await getLayoutElements(gallery.id) : [])
     setBoardElements(board ? await getLayoutElements(board.id) : [])
   }
@@ -75,7 +85,30 @@ export default function DatabasePage() {
       ? { options: newFieldOptions.split(',').map((x) => x.trim()).filter(Boolean) }
       : newFieldType === 'relation' ? { target_database_id: relationTarget } : {}
     await createField(databaseId, { name: newFieldName.trim(), type: newFieldType, required: false, config }, fields.length)
-    setNewFieldName(''); setNewFieldType('text'); setNewFieldOptions(''); setRelationTarget(''); setShowFieldForm(false); await load()
+    setNewFieldName('')
+    setNewFieldType('text')
+    setNewFieldOptions('')
+    setRelationTarget('')
+    await load()
+  }
+
+  const beginEditField = (field: Field) => {
+    setEditingFieldId(field.id)
+    setEditFieldName(field.name)
+    setEditFieldType(field.type)
+    setEditFieldOptions(Array.isArray(field.config.options) ? field.config.options.map(String).join(', ') : '')
+    setEditRelationTarget(String(field.config.target_database_id || ''))
+    setShowFieldForm(true)
+  }
+
+  const saveField = async () => {
+    if (!editingFieldId || !editFieldName.trim()) return
+    const config = editFieldType === 'select' || editFieldType === 'multi_select'
+      ? { options: editFieldOptions.split(',').map((x) => x.trim()).filter(Boolean) }
+      : editFieldType === 'relation' ? { target_database_id: editRelationTarget } : {}
+    await updateField(editingFieldId, { name: editFieldName.trim(), type: editFieldType, config })
+    setEditingFieldId(null)
+    await load()
   }
 
   const imageFields = fields.filter((field) => field.type === 'image')
@@ -91,7 +124,7 @@ export default function DatabasePage() {
     const density = String(activeView?.config.density || 'comfortable')
     const hidden = new Set(Array.isArray(activeView?.config.hiddenFieldIds) ? activeView?.config.hiddenFieldIds as string[] : [])
     const visible = contentFields.filter((field) => !hidden.has(field.id))
-    return <div className={`table-shell table-${density}`} style={{ ['--table-header' as string]: String(activeView?.config.headerColor || '#faf8f4'), ['--table-row' as string]: String(activeView?.config.rowColor || '#ffffff') }}><table className="data-table"><thead><tr><th>Name</th>{visible.map((field) => <th key={field.id}><span className="th-inner">{field.name}<button onClick={async () => { if (confirm(`Delete ${field.name}?`)) { await deleteField(field.id); await load() } }}><MoreHorizontal size={14} /></button></span></th>)}<th /></tr></thead><tbody>{filtered.map((record) => <tr key={record.id}><td><Link className="record-link" to={`/database/${databaseId}/record/${record.id}`}>{record.title || 'Untitled'}</Link></td>{visible.map((field) => <td key={field.id}>{field.type === 'image' && record.data[field.id] ? <img className="tiny-thumb" src={String(record.data[field.id])} alt="" /> : displayValue(record.data[field.id], field)}</td>)}<td><button className="icon-button" onClick={async () => { if (confirm(`Delete ${record.title}?`)) { await deleteRecord(record.id); await load() } }}><Trash2 size={15} /></button></td></tr>)}</tbody></table></div>
+    return <div className={`table-shell table-${density}`} style={{ ['--table-header' as string]: String(activeView?.config.headerColor || '#faf8f4'), ['--table-row' as string]: String(activeView?.config.rowColor || '#ffffff') }}><table className="data-table"><thead><tr><th>Name</th>{visible.map((field) => <th key={field.id}><span className="th-inner">{field.name}<button onClick={() => beginEditField(field)} title={`Edit ${field.name}`}><MoreHorizontal size={14} /></button></span></th>)}<th /></tr></thead><tbody>{filtered.map((record) => <tr key={record.id}><td><Link className="record-link" to={`/database/${databaseId}/record/${record.id}`}>{record.title || 'Untitled'}</Link></td>{visible.map((field) => <td key={field.id}>{field.type === 'image' && record.data[field.id] ? <img className="tiny-thumb" src={String(record.data[field.id])} alt="" /> : displayValue(record.data[field.id], field)}</td>)}<td><button className="icon-button" onClick={async () => { if (confirm(`Delete ${record.title}?`)) { await deleteRecord(record.id); await load() } }}><Trash2 size={15} /></button></td></tr>)}</tbody></table></div>
   }
 
   const renderGallery = () => <div className="gallery-grid">{filtered.map((record) => {
@@ -112,7 +145,7 @@ export default function DatabasePage() {
   return <div className="page-wrap wide">
     <header className="page-header database-header"><div><p className="eyebrow">DATABASE</p><h1>{database?.icon || '✦'} {database?.name || 'Loading…'}</h1><p className="page-subtitle">One source of truth, with views and designs that can look completely different.</p></div><div className="button-row"><Link className="secondary-button" to={`/database/${databaseId}/design`}><Brush size={17} /> Design</Link><button className="primary-button compact" onClick={addRecord}><Plus size={17} /> New record</button><button className="icon-button danger" onClick={async () => { if (database && confirm(`Delete ${database.name}?`)) { await deleteDatabase(database.id); navigate('/') } }}><Trash2 size={17} /></button></div></header>
 
-    <div className="database-toolbar-v2"><div className="database-toolbar-left"><label className="search-box"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search every property" /></label><div className="view-switcher">{views.map((view) => <button className={activeView?.id === view.id ? 'active' : ''} onClick={() => setActiveViewId(view.id)} key={view.id}>{view.type === 'table' ? <Table2 size={15} /> : view.type === 'gallery' ? <LayoutGrid size={15} /> : <Kanban size={15} />}{view.name}</button>)}</div></div><div className="database-toolbar-right"><button className="secondary-button" onClick={() => setShowViewSettings((v) => !v)}><Settings2 size={16} /> View settings</button><button className="secondary-button" onClick={() => setShowFieldForm((v) => !v)}><Plus size={16} /> Property</button></div></div>
+    <div className="database-toolbar-v2"><div className="database-toolbar-left"><label className="search-box"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search every property" /></label><div className="view-switcher">{views.map((view) => <button className={activeView?.id === view.id ? 'active' : ''} onClick={() => setActiveViewId(view.id)} key={view.id}>{view.type === 'table' ? <Table2 size={15} /> : view.type === 'gallery' ? <LayoutGrid size={15} /> : <Kanban size={15} />}{view.name}</button>)}</div></div><div className="database-toolbar-right"><button className="secondary-button" onClick={() => setShowViewSettings((v) => !v)}><Settings2 size={16} /> View settings</button><button className="secondary-button" onClick={() => setShowFieldForm((v) => !v)}><Plus size={16} /> Properties</button></div></div>
 
     {showViewSettings && activeView && <div className="view-settings revamp-settings">
       <label>View name<input value={activeView.name} onChange={(e) => setViews((current) => current.map((v) => v.id === activeView.id ? { ...v, name: e.target.value } : v))} onBlur={() => updateView(activeView.id, { name: activeView.name })} /></label>
@@ -121,7 +154,35 @@ export default function DatabasePage() {
       {activeView.type === 'table' && <><label>Density<select value={String(activeView.config.density || 'comfortable')} onChange={(e) => patchActiveView({ density: e.target.value })}><option value="compact">Compact</option><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></label><label>Header color<input type="color" value={String(activeView.config.headerColor || '#faf8f4')} onChange={(e) => patchActiveView({ headerColor: e.target.value })} /></label><label>Row color<input type="color" value={String(activeView.config.rowColor || '#ffffff')} onChange={(e) => patchActiveView({ rowColor: e.target.value })} /></label></>}
     </div>}
 
-    {showFieldForm && <div className="field-builder card-panel"><label>Property name<input value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} /></label><label>Type<select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value as FieldType)}>{fieldTypes.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}</select></label>{['select','multi_select'].includes(newFieldType) && <label>Options<input value={newFieldOptions} onChange={(e) => setNewFieldOptions(e.target.value)} placeholder="Planned, Booked, Done" /></label>}{newFieldType === 'relation' && <label>Related database<select value={relationTarget} onChange={(e) => setRelationTarget(e.target.value)}><option value="">Choose database</option>{allDatabases.filter((db) => db.id !== databaseId).map((db) => <option value={db.id} key={db.id}>{db.name}</option>)}</select></label>}<div className="field-builder-actions"><button className="primary-button compact" onClick={addField}>Add property</button></div></div>}
+    {showFieldForm && <section className="property-manager card-panel">
+      <div className="property-manager-head"><div><h2>Database properties</h2><p>Edit the schema here. Designs stay bound to the property itself, so renaming or changing it updates everywhere that property is used.</p></div><button className="icon-button" onClick={() => { setShowFieldForm(false); setEditingFieldId(null) }}><X size={17} /></button></div>
+      <div className="property-manager-grid">
+        <div className="property-list-panel">
+          <div className="property-list-title"><strong>Existing properties</strong><span>{contentFields.length}</span></div>
+          {contentFields.map((field) => <div className={`property-row ${editingFieldId === field.id ? 'active' : ''}`} key={field.id}><button onClick={() => beginEditField(field)}><span>{field.name}</span><small>{field.type.replace('_', ' ')}</small></button><button className="icon-button" onClick={() => beginEditField(field)} title={`Edit ${field.name}`}><Pencil size={14} /></button></div>)}
+          {!contentFields.length && <p className="panel-note">No custom properties yet.</p>}
+        </div>
+
+        <div className="property-editor-panel">
+          {editingFieldId ? <>
+            <div className="property-editor-title"><strong>Edit property</strong><button className="link-button" onClick={() => setEditingFieldId(null)}>Add new instead</button></div>
+            <label>Property name<input value={editFieldName} onChange={(e) => setEditFieldName(e.target.value)} /></label>
+            <label>Type<select value={editFieldType} onChange={(e) => setEditFieldType(e.target.value as FieldType)}>{fieldTypes.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}</select></label>
+            {['select','multi_select'].includes(editFieldType) && <label>Options<input value={editFieldOptions} onChange={(e) => setEditFieldOptions(e.target.value)} placeholder="Planned, Booked, Done" /></label>}
+            {editFieldType === 'relation' && <label>Related database<select value={editRelationTarget} onChange={(e) => setEditRelationTarget(e.target.value)}><option value="">Choose database</option>{allDatabases.filter((db) => db.id !== databaseId).map((db) => <option value={db.id} key={db.id}>{db.name}</option>)}</select></label>}
+            <p className="panel-note">Changing a type does not erase the stored values, but existing records may need their value re-entered in the new format.</p>
+            <div className="button-row"><button className="primary-button compact" onClick={saveField}>Save property</button><button className="secondary-button" onClick={async () => { const field = fields.find((f) => f.id === editingFieldId); if (field && confirm(`Delete ${field.name}?`)) { await deleteField(field.id); setEditingFieldId(null); await load() } }}><Trash2 size={15} /> Delete</button></div>
+          </> : <>
+            <div className="property-editor-title"><strong>Add a property</strong></div>
+            <label>Property name<input value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} placeholder="Rating, Destination, Guest…" /></label>
+            <label>Type<select value={newFieldType} onChange={(e) => setNewFieldType(e.target.value as FieldType)}>{fieldTypes.map((type) => <option value={type.value} key={type.value}>{type.label}</option>)}</select></label>
+            {['select','multi_select'].includes(newFieldType) && <label>Options<input value={newFieldOptions} onChange={(e) => setNewFieldOptions(e.target.value)} placeholder="Planned, Booked, Done" /></label>}
+            {newFieldType === 'relation' && <label>Related database<select value={relationTarget} onChange={(e) => setRelationTarget(e.target.value)}><option value="">Choose database</option>{allDatabases.filter((db) => db.id !== databaseId).map((db) => <option value={db.id} key={db.id}>{db.name}</option>)}</select></label>}
+            <button className="primary-button compact" onClick={addField}>Add property</button>
+          </>}
+        </div>
+      </div>
+    </section>}
 
     {activeView?.type === 'gallery' ? renderGallery() : activeView?.type === 'board' ? renderBoard() : renderTable()}
   </div>
