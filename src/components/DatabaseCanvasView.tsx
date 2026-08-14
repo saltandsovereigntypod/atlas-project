@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { Grip, LayoutGrid, Move, Rows3, Table2 } from 'lucide-react'
+import { Grip, LayoutGrid, Move } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getRecords } from '../lib/data'
 import type { Database, RecordRow } from '../types'
@@ -57,12 +57,17 @@ export default function DatabaseCanvasView({ blockId, config, editing, databases
     return l.y + l.height + 24
   }))
 
-  return <div className="db-canvas-view" data-block-id={blockId}>
+  return <div
+    className="db-canvas-view"
+    data-block-id={blockId}
+    onPointerDown={event => event.stopPropagation()}
+    onClick={event => event.stopPropagation()}
+  >
     <div className="db-canvas-header">
       {title && <h3>{title}</h3>}
       {editing && <div className="db-canvas-controls">
-        <button className={recordLayoutMode === 'auto' ? 'active' : ''} onClick={() => save({ recordLayoutMode: 'auto' })}><LayoutGrid /> Auto layout</button>
-        <button className={recordLayoutMode === 'freeform' ? 'active' : ''} onClick={() => save({ recordLayoutMode: 'freeform' })}><Move /> Freeform records</button>
+        <button type="button" className={recordLayoutMode === 'auto' ? 'active' : ''} onClick={() => save({ recordLayoutMode: 'auto' })}><LayoutGrid /> Auto layout</button>
+        <button type="button" className={recordLayoutMode === 'freeform' ? 'active' : ''} onClick={() => save({ recordLayoutMode: 'freeform' })}><Move /> Freeform records</button>
       </div>}
     </div>
 
@@ -79,47 +84,82 @@ function FreeformRecordCard({ record, databaseId, editing, layout, onSave }: { r
   useEffect(() => setLocal(layout), [layout.x, layout.y, layout.width, layout.height, layout.rotation, layout.zIndex])
 
   const drag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.stopPropagation()
     if (!editing || (event.target as HTMLElement).closest('button,a,.record-resize-handle')) return
     event.preventDefault()
     const startX = event.clientX
     const startY = event.clientY
-    const origin = local
+    const origin = { ...local }
     const target = event.currentTarget
     target.setPointerCapture(event.pointerId)
-    const move = (e: PointerEvent) => setLocal(current => ({ ...current, x: Math.max(0, origin.x + e.clientX - startX), y: Math.max(0, origin.y + e.clientY - startY) }))
-    const up = () => {
-      target.removeEventListener('pointermove', move as EventListener)
+
+    const move = (e: PointerEvent) => {
+      e.stopPropagation()
+      setLocal(current => ({
+        ...current,
+        x: Math.max(0, origin.x + e.clientX - startX),
+        y: Math.max(0, origin.y + e.clientY - startY),
+      }))
+    }
+
+    const up = (e: PointerEvent) => {
+      e.stopPropagation()
+      target.removeEventListener('pointermove', move)
       target.removeEventListener('pointerup', up)
+      target.releasePointerCapture?.(event.pointerId)
       setLocal(current => { onSave(current); return current })
     }
-    target.addEventListener('pointermove', move as EventListener)
+
+    target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', up)
   }
 
   const resize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
     if (!editing) return
-    event.preventDefault(); event.stopPropagation()
+    event.preventDefault()
     const startX = event.clientX
     const startY = event.clientY
-    const origin = local
+    const origin = { ...local }
     const target = event.currentTarget
     target.setPointerCapture(event.pointerId)
-    const move = (e: PointerEvent) => setLocal(current => ({ ...current, width: Math.max(110, origin.width + e.clientX - startX), height: Math.max(90, origin.height + e.clientY - startY) }))
-    const up = () => {
-      target.removeEventListener('pointermove', move as EventListener)
+
+    const move = (e: PointerEvent) => {
+      e.stopPropagation()
+      setLocal(current => ({
+        ...current,
+        width: Math.max(110, origin.width + e.clientX - startX),
+        height: Math.max(90, origin.height + e.clientY - startY),
+      }))
+    }
+
+    const up = (e: PointerEvent) => {
+      e.stopPropagation()
+      target.removeEventListener('pointermove', move)
       target.removeEventListener('pointerup', up)
+      target.releasePointerCapture?.(event.pointerId)
       setLocal(current => { onSave(current); return current })
     }
-    target.addEventListener('pointermove', move as EventListener)
+
+    target.addEventListener('pointermove', move)
     target.addEventListener('pointerup', up)
   }
 
-  const style = { left: local.x, top: local.y, width: local.width, height: local.height, zIndex: local.zIndex || 1, transform: `rotate(${local.rotation || 0}deg)` }
+  const style = {
+    left: local.x,
+    top: local.y,
+    width: local.width,
+    height: local.height,
+    zIndex: local.zIndex || 1,
+    transform: `rotate(${local.rotation || 0}deg)`,
+  }
 
-  return <div className={`db-freeform-card ${editing ? 'editing' : ''}`} style={style} onPointerDown={drag}>
+  return <div className={`db-freeform-card ${editing ? 'editing' : ''}`} style={style} onPointerDown={drag} onClick={event => event.stopPropagation()}>
     {editing && <div className="db-card-grip"><Grip /></div>}
-    {editing ? <div className="db-card-content"><strong>{record.title}</strong><small>Drag me independently</small></div> : <Link className="db-card-content" to={`/database/${databaseId}/record/${record.id}`}><strong>{record.title}</strong></Link>}
-    {editing && <button className="record-resize-handle" onPointerDown={resize} aria-label="Resize record card" />}
+    {editing
+      ? <div className="db-card-content"><strong>{record.title}</strong><small>Drag me independently</small></div>
+      : <Link className="db-card-content" to={`/database/${databaseId}/record/${record.id}`}><strong>{record.title}</strong></Link>}
+    {editing && <button type="button" className="record-resize-handle" onPointerDown={resize} aria-label="Resize record card" />}
   </div>
 }
 
