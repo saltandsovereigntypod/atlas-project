@@ -1,166 +1,133 @@
 # Atlas Studio
 
-Atlas Studio is a functional first version of a visual database workspace. It combines flexible user-created databases with a reusable record canvas. The app is intentionally domain-agnostic. A Books database, Dream Journal, Character Bible, Podcast Planner, Grimoire, Recipe Box, or Project Tracker all use the same underlying system.
+Atlas Studio is a domain-agnostic visual database workspace. The goal is not to build a Books app, Travel app, or Podcast app. The goal is to provide enough generic data, view, relation, page, and design primitives that all of those can be built inside Atlas without adding domain-specific code.
+
+## Current revamp direction
+
+Atlas now separates four ideas that were previously tangled together:
+
+- **Data**: databases, properties, records, and relations.
+- **Views**: saved table, gallery, and board presentations stored in Supabase.
+- **Design surfaces**: independent default designs for record pages, gallery cards, and board cards.
+- **Record overrides**: an individual record can clone the database default design and then become completely unique without changing the rest of the database.
+
+That means a Books database can have one visual language while a Trips database has another, and a single record inside either database can still override its own page or card design.
+
+## Supabase setup
+
+For a brand-new Supabase project, run these SQL files in order:
+
+1. `supabase/schema.sql`
+2. `supabase/002_revamp.sql`
+
+For an existing Atlas Supabase project that already ran `schema.sql`, run only:
+
+```text
+supabase/002_revamp.sql
+```
+
+The migration preserves existing records and layouts. Existing layouts become the default **record page** design for their database. It adds saved views plus the columns required for gallery, board, and per-record design overrides.
 
 ## What works now
 
 - Email/password sign-up and sign-in with Supabase Auth
-- Automatic first workspace creation
-- Create and delete arbitrary databases
-- Custom field creation with text, long text, number, date, checkbox, select, multi-select, URL, image URL, and relation field types
-- Create, edit, search, and delete records
-- JSON-backed flexible record values
-- Visual designer for each database
-- Add and drag text, data-bound fields, and shapes
-- Bind design elements to record title or any custom field
-- Render image fields as images in the canvas
-- Change position, size, rotation, typography, alignment, color, shape fill, corner radius, opacity, and canvas background
-- Preview a saved design against different database records
-- Persistent design layouts stored in Supabase
-- Row Level Security so workspace data is private to workspace members
+- Automatic workspace creation
+- Arbitrary databases and flexible JSON-backed records
+- Text, long text, number, date, checkbox, select, multi-select, URL, image, and relation properties
+- Relation properties can target another Atlas database and select real records from it
+- Table, gallery, and board views
+- View configuration stored in Supabase instead of browser-only localStorage
+- Table density and color controls
+- Gallery and board grouping/cover configuration
+- Independent visual designers for record pages, gallery cards, and board cards
+- Dragging, resizing, typography, colors, shapes, images, and data-bound properties
+- Default designs per database
+- Per-record record-page overrides that begin as a clone of the database default
+- Designed gallery and board cards render live record data
+- Native image uploads through Supabase Storage
+- Row Level Security for workspace data
 - GitHub Pages deployment workflow
-- Native image uploads to Supabase Storage, plus direct image URLs
 
-## Stack
+## Architecture
 
-- React 18
-- TypeScript
-- Vite
-- Supabase Postgres + Auth + Storage
-- React Router using hash routing, which works cleanly on GitHub Pages
-- Lucide icons
-- Plain CSS for the application shell and editor
-
-The canvas is DOM-based in v0.1 rather than Konva. That keeps the first version easier to understand and deploy while still giving you draggable, persistent, data-bound design elements. A later version can move to Konva or another canvas renderer when multi-select, snapping, zoom, grouping, and richer transformations are needed.
-
-## 1. Create the Supabase project
-
-1. Create a free project at Supabase.
-2. Open **SQL Editor**.
-3. Paste the entire contents of `supabase/schema.sql` into a new query.
-4. Run it once.
-5. Open **Project Settings > API** and copy the Project URL and anon/public key.
-
-The SQL creates all tables, indexes, Row Level Security policies, the automatic workspace-owner membership trigger, and the `user-assets` storage bucket.
-
-### Auth note
-
-Supabase normally requires email confirmation for new users. During private development, you can either keep that behavior and confirm each email, or adjust it in **Authentication > Providers > Email** in your Supabase dashboard.
-
-## 2. Run locally
-
-Copy the environment template:
-
-```bash
-cp .env.example .env
+```text
+Workspace
+  -> Databases
+      -> Fields
+      -> Records
+      -> Views
+          -> Table configuration
+          -> Gallery configuration
+          -> Board configuration
+      -> Layouts
+          -> Record page default
+          -> Gallery card default
+          -> Board card default
+          -> Record-specific overrides
 ```
 
-Then edit `.env`:
+The database owns information. Views and layouts own presentation. Changing a hotel address, podcast guest name, book rating, or project status changes the record. Moving that information around visually changes only the presentation.
+
+## Design inheritance
+
+The intended design hierarchy is:
+
+```text
+Database default design
+        ↓
+Saved/reusable templates (next layer)
+        ↓
+Individual record override
+```
+
+A record with no override inherits the database default. Opening **Customize this record** creates an override by cloning that default, after which the record can diverge completely.
+
+## Relations
+
+A Relation property stores related record IDs, but its field configuration now also identifies the target database. The editor shows real records from that target database rather than making the user paste UUIDs.
+
+The next relation layer is reverse relations, embedded related-record views, rollups, counts, sums, and formulas. Those are necessary for things like travel budgets, podcast episode dashboards, series/character relationships, and project management.
+
+## Product acceptance tests
+
+Atlas should eventually be able to recreate all of these without domain-specific application code:
+
+1. A rich book tracker with custom cards and unique book pages.
+2. A travel workspace with trips, reservations, places, expenses, packing, timelines, photos, notes, and memories.
+3. A podcast workspace with episodes, guests, research, sponsors, tasks, clips, publishing status, and assets.
+4. An entirely different workflow we did not anticipate when designing the schema.
+
+If a feature only works because Atlas understands what a “book,” “trip,” or “episode” is, the abstraction is wrong.
+
+## Next major layer
+
+The next revamp milestone is **page composition + embedded views**. A record page should be able to contain functional blocks such as related-record tables, galleries, boards, calendars, timelines, metrics, progress indicators, checklists, text, images, and freeform designed regions. That is what will let a Trip record become a full travel workspace or a Podcast record become a full production dashboard.
+
+## Local development
+
+Create a `.env` file with:
 
 ```env
 VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
-Install and run:
+Then:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local address printed by Vite.
+## GitHub Pages
 
-## 3. Put it on GitHub
-
-Create a new GitHub repository and push this project to the `main` branch.
-
-In the GitHub repository, go to **Settings > Secrets and variables > Actions** and create these repository secrets:
+Add these repository secrets under **Settings > Secrets and variables > Actions**:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-Use the same values as your local `.env` file.
-
-Then go to **Settings > Pages** and set **Source** to **GitHub Actions**.
-
-Every push to `main` will run `.github/workflows/deploy.yml`, build the Vite app, and deploy it to GitHub Pages.
-
-## 4. Supabase URL configuration
-
-In Supabase, open **Authentication > URL Configuration**.
-
-During local development, add your Vite local URL, commonly:
-
-```text
-http://localhost:5173
-```
-
-After GitHub Pages is live, add the Pages URL as an allowed redirect URL too. Hash routing is used, so direct navigation to app screens does not require special GitHub Pages rewrite rules.
-
-## Data model
-
-The core tables are:
-
-```text
-workspaces
-workspace_members
-databases
-fields
-records
-layouts
-layout_elements
-```
-
-A record stores flexible field values in its `data` JSONB column, keyed by field UUID. This is deliberately different from hardcoding tables such as `books` or `characters`.
-
-For example, a database might contain a field whose ID is `abc...`. A record could contain:
-
-```json
-{
-  "abc...": "Finished",
-  "def...": 5,
-  "ghi...": ["Fantasy", "Romance"]
-}
-```
-
-The field definitions tell the UI what each value means and how it should be edited.
-
-## About relation fields
-
-Relation is included as a schema type, but v0.1 does not yet have a dedicated relation picker UI. Relation values can be represented as record IDs in JSON. The next architecture step should introduce a proper relation editor, reverse relations, and rollups.
-
-## Important v0.1 limitations
-
-This is a functional MVP, not a finished replacement for Notion or Canva. The biggest missing pieces are:
-
-- Dedicated relation picker and rollups
-- Multiple saved database views
-- Sort and filter builders
-- Gallery and board views
-- Rich text document blocks
-- Canvas resize handles
-- Multi-select, grouping, snapping, guides, undo/redo, zoom, and keyboard shortcuts
-- Reusable templates across databases
-- Responsive/auto-layout containers
-- Conditional visibility and conditional styling
-- Formulas
-- Real-time multi-user collaboration
-
-The database schema is already shaped so those features can be layered on without turning the project into a Books-only tracker.
-
-## Recommended next milestone
-
-The most valuable next build is **Views + Relations**:
-
-1. Add a `views` table with table/gallery/board view configuration.
-2. Add filter and sort rules.
-3. Build a true relation picker between databases.
-4. Add reverse relation display and rollups.
-5. Add native Supabase Storage image uploads.
-
-After that, the design editor can become much more Canva-like without the data foundation changing underneath it.
+Set GitHub Pages source to **GitHub Actions**. Every push to `main` runs the included deployment workflow.
 
 ## Security
 
-The browser only receives the Supabase anon key. That key is expected to be public. Data access is protected by Supabase Row Level Security. Never put the Supabase service role key in this frontend or in GitHub Pages secrets used by the build.
+The browser receives only the Supabase publishable/anon key, which is expected to be public. Access control is enforced with Row Level Security. Never place a Supabase service-role or secret key in the frontend or GitHub Pages build secrets.
