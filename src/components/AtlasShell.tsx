@@ -1,5 +1,5 @@
-import { PropsWithChildren, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, FilePlus2, FolderPlus, Heart, Home, LogOut, Menu, Plus, Search, Settings } from 'lucide-react'
+import { PropsWithChildren, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { ChevronDown, ChevronRight, FilePlus2, Heart, Home, LogOut, Menu, Plus, Search, Settings } from 'lucide-react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { createPage, getDatabases, getPages, updatePage } from '../lib/data'
 import { supabase } from '../lib/supabase'
@@ -29,5 +29,5 @@ export default function AtlasShell({children}:PropsWithChildren){
  </div>
 }
 
-function SidebarSection({label,icon,open,onToggle,action,children}:{label:string;icon?:React.ReactNode;open:boolean;onToggle:()=>void;action?:React.ReactNode;children:React.ReactNode}){return <div className="atlas-sidebar-section"><div className="atlas-section-head"><button onClick={onToggle}>{open?<ChevronDown/>:<ChevronRight/>}{icon}{label}</button>{action}</div>{open&&<div className="atlas-section-body">{children}</div>}</div>}
+function SidebarSection({label,icon,open,onToggle,action,children}:{label:string;icon?:ReactNode;open:boolean;onToggle:()=>void;action?:ReactNode;children:ReactNode}){return <div className="atlas-sidebar-section"><div className="atlas-section-head"><button onClick={onToggle}>{open?<ChevronDown/>:<ChevronRight/>}{icon}{label}</button>{action}</div>{open&&<div className="atlas-section-body">{children}</div>}</div>}
 function PageLinks({pages}:{pages:Page[]}){return <>{pages.map(p=><div className="atlas-page-link-row" key={p.id}><NavLink to={`/page/${p.id}`}><span>{p.icon||'•'}</span>{p.title}</NavLink><button title={p.favorite?'Unfavorite':'Favorite'} onClick={()=>updatePage(p.id,{favorite:!p.favorite})}><Heart fill={p.favorite?'currentColor':'none'}/></button></div>)}</>}
