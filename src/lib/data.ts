@@ -1,23 +1,13 @@
 import { supabase } from './supabase'
-import type { Database, Field, Layout, LayoutElement, RecordRow, Workspace } from '../types'
+import type { Database, DatabaseView, Field, Layout, LayoutElement, LayoutSurface, RecordRow, ViewType, Workspace } from '../types'
 
 export async function ensureWorkspace(userId: string, email?: string | null): Promise<Workspace> {
-  const { data: memberships, error: membershipError } = await supabase
-    .from('workspace_members')
-    .select('workspace:workspaces(*)')
-    .eq('user_id', userId)
-    .limit(1)
+  const { data: memberships, error: membershipError } = await supabase.from('workspace_members').select('workspace:workspaces(*)').eq('user_id', userId).limit(1)
   if (membershipError) throw membershipError
-
   const existing = memberships?.[0]?.workspace as unknown as Workspace | undefined
   if (existing?.id) return existing
-
   const defaultName = email ? `${email.split('@')[0]}'s workspace` : 'My workspace'
-  const { data: workspace, error } = await supabase
-    .from('workspaces')
-    .insert({ name: defaultName, owner_id: userId })
-    .select('*')
-    .single()
+  const { data: workspace, error } = await supabase.from('workspaces').insert({ name: defaultName, owner_id: userId }).select('*').single()
   if (error) throw error
   return workspace as Workspace
 }
@@ -29,22 +19,12 @@ export async function getDatabases(workspaceId: string): Promise<Database[]> {
 }
 
 export async function createDatabase(workspaceId: string, name: string): Promise<Database> {
-  const { data, error } = await supabase
-    .from('databases')
-    .insert({ workspace_id: workspaceId, name, description: '' })
-    .select('*')
-    .single()
+  const { data, error } = await supabase.from('databases').insert({ workspace_id: workspaceId, name, description: '' }).select('*').single()
   if (error) throw error
   const db = data as Database
-  const { error: fieldError } = await supabase.from('fields').insert({
-    database_id: db.id,
-    name: 'Name',
-    type: 'text',
-    position: 0,
-    required: true,
-    config: {},
-  })
+  const { error: fieldError } = await supabase.from('fields').insert({ database_id: db.id, name: 'Name', type: 'text', position: 0, required: true, config: {} })
   if (fieldError) throw fieldError
+  await ensureDefaultViews(db.id)
   return db
 }
 
@@ -71,11 +51,7 @@ export async function getFields(databaseId: string): Promise<Field[]> {
 }
 
 export async function createField(databaseId: string, field: Pick<Field, 'name' | 'type' | 'required' | 'config'>, position: number) {
-  const { data, error } = await supabase
-    .from('fields')
-    .insert({ ...field, database_id: databaseId, position })
-    .select('*')
-    .single()
+  const { data, error } = await supabase.from('fields').insert({ ...field, database_id: databaseId, position }).select('*').single()
   if (error) throw error
   return data as Field
 }
@@ -98,22 +74,13 @@ export async function getRecord(recordId: string): Promise<RecordRow> {
 }
 
 export async function createRecord(databaseId: string, title = 'Untitled') {
-  const { data, error } = await supabase
-    .from('records')
-    .insert({ database_id: databaseId, title, data: {} })
-    .select('*')
-    .single()
+  const { data, error } = await supabase.from('records').insert({ database_id: databaseId, title, data: {} }).select('*').single()
   if (error) throw error
   return data as RecordRow
 }
 
 export async function updateRecord(recordId: string, patch: Partial<Pick<RecordRow, 'title' | 'data'>>) {
-  const { data, error } = await supabase
-    .from('records')
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq('id', recordId)
-    .select('*')
-    .single()
+  const { data, error } = await supabase.from('records').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', recordId).select('*').single()
   if (error) throw error
   return data as RecordRow
 }
@@ -123,18 +90,89 @@ export async function deleteRecord(recordId: string) {
   if (error) throw error
 }
 
-export async function getOrCreateLayout(databaseId: string): Promise<Layout> {
-  const { data: existing, error: findError } = await supabase.from('layouts').select('*').eq('database_id', databaseId).limit(1)
-  if (findError) throw findError
-  if (existing?.[0]) return existing[0] as Layout
-
-  const { data, error } = await supabase
-    .from('layouts')
-    .insert({ database_id: databaseId, name: 'Default card', canvas_width: 900, canvas_height: 560, background: '#f8f4ec' })
-    .select('*')
-    .single()
+export async function getViews(databaseId: string): Promise<DatabaseView[]> {
+  const { data, error } = await supabase.from('views').select('*').eq('database_id', databaseId).order('position')
   if (error) throw error
-  return data as Layout
+  return (data || []) as DatabaseView[]
+}
+
+export async function ensureDefaultViews(databaseId: string): Promise<DatabaseView[]> {
+  const existing = await getViews(databaseId)
+  if (existing.length) return existing
+  const rows = [
+    { database_id: databaseId, name: 'Table', type: 'table', position: 0, config: { density: 'comfortable', showGrid: true } },
+    { database_id: databaseId, name: 'Gallery', type: 'gallery', position: 1, config: { useDesignedCard: true } },
+    { database_id: databaseId, name: 'Board', type: 'board', position: 2, config: { useDesignedCard: true } },
+  ]
+  const { data, error } = await supabase.from('views').insert(rows).select('*').order('position')
+  if (error) throw error
+  return (data || []) as DatabaseView[]
+}
+
+export async function createView(databaseId: string, name: string, type: ViewType, position: number) {
+  const { data, error } = await supabase.from('views').insert({ database_id: databaseId, name, type, position, config: {} }).select('*').single()
+  if (error) throw error
+  return data as DatabaseView
+}
+
+export async function updateView(viewId: string, patch: Partial<Pick<DatabaseView, 'name' | 'position' | 'config'>>) {
+  const { data, error } = await supabase.from('views').update({ ...patch, updated_at: new Date().toISOString() }).eq('id', viewId).select('*').single()
+  if (error) throw error
+  return data as DatabaseView
+}
+
+export async function deleteView(viewId: string) {
+  const { error } = await supabase.from('views').delete().eq('id', viewId)
+  if (error) throw error
+}
+
+const surfaceSize: Record<LayoutSurface, { width: number; height: number }> = {
+  record: { width: 900, height: 700 },
+  gallery: { width: 420, height: 560 },
+  board: { width: 320, height: 220 },
+}
+
+export async function getLayoutForSurface(databaseId: string, surface: LayoutSurface, recordId?: string | null): Promise<Layout | null> {
+  let query = supabase.from('layouts').select('*').eq('database_id', databaseId).eq('surface', surface)
+  query = recordId ? query.eq('record_id', recordId) : query.is('record_id', null)
+  const { data, error } = await query.limit(1)
+  if (error) throw error
+  return (data?.[0] || null) as Layout | null
+}
+
+export async function getOrCreateSurfaceLayout(databaseId: string, surface: LayoutSurface, recordId?: string | null): Promise<Layout> {
+  const existing = await getLayoutForSurface(databaseId, surface, recordId)
+  if (existing) return existing
+
+  const size = surfaceSize[surface]
+  let seed: Layout | null = null
+  if (recordId) seed = await getLayoutForSurface(databaseId, surface, null)
+
+  const { data, error } = await supabase.from('layouts').insert({
+    database_id: databaseId,
+    name: recordId ? `Custom ${surface}` : `Default ${surface}`,
+    surface,
+    record_id: recordId || null,
+    canvas_width: seed?.canvas_width || size.width,
+    canvas_height: seed?.canvas_height || size.height,
+    background: seed?.background || '#f8f4ec',
+  }).select('*').single()
+  if (error) throw error
+  const layout = data as Layout
+
+  if (recordId && seed) {
+    const elements = await getLayoutElements(seed.id)
+    if (elements.length) {
+      const copies = elements.map(({ id: _id, layout_id: _layoutId, ...element }) => ({ ...element, layout_id: layout.id }))
+      const { error: copyError } = await supabase.from('layout_elements').insert(copies)
+      if (copyError) throw copyError
+    }
+  }
+  return layout
+}
+
+export async function getOrCreateLayout(databaseId: string): Promise<Layout> {
+  return getOrCreateSurfaceLayout(databaseId, 'record', null)
 }
 
 export async function updateLayout(layoutId: string, patch: Partial<Pick<Layout, 'name' | 'canvas_width' | 'canvas_height' | 'background'>>) {
