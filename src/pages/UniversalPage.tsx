@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Layers, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { useAppContext } from '../App'
+import AtlasWidget from '../components/AtlasWidget'
 import DatabaseCanvasView from '../components/DatabaseCanvasView'
 import EditorSidebar from '../components/EditorSidebar'
 import FieldInput from '../components/FieldInput'
@@ -164,8 +165,8 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     const offset = blocks.length % 8
     let config: BlockPatch = {
       x: 60 + offset * 30, y: 90 + offset * 30,
-      width: type === 'database_view' || type === 'section' ? 700 : 320,
-      height: type === 'image' ? 280 : type === 'database_view' ? 390 : type === 'section' ? 320 : 140,
+      width: type === 'database_view' || type === 'section' ? 700 : type === 'widget' ? 360 : 320,
+      height: type === 'image' ? 280 : type === 'database_view' ? 390 : type === 'section' ? 320 : type === 'widget' ? 220 : 140,
       rotation: 0, zIndex: Math.max(1, ...blocks.map(block => Number(block.config?.zIndex || 1))) + 1,
       background: 'transparent', textColor: '#211e1a', radius: 0, padding: 0,
     }
@@ -180,6 +181,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     if (type === 'progress') config = { ...config, label: 'Progress', fieldId: fields.find(field => field.type === 'number')?.id || '', value: 50, max: 100, width: 360, height: 100 }
     if (type === 'divider') config = { ...config, width: 420, height: 28 }
     if (type === 'section') config = { ...config, title: 'Structured section', background: '#ffffff', border: '#ded6cb', radius: 20, padding: 24 }
+    if (type === 'widget') config = { ...config, widgetType: 'digital_clock', background: '#ffffff', textColor: '#211e1a', radius: 18, padding: 20, fontSize: 16, databaseId: database?.id || databases[0]?.id || '' }
     const created = await createPageBlock(page.id, type, blocks.length, config)
     setBlocks(items => [...items, created])
     setSelectedId(created.id)
@@ -318,6 +320,7 @@ function BlockContent({ block, page, config, editing, databases, record, fields,
   if (block.type === 'metric') return <MetricDisplay config={config} />
   if (block.type === 'progress') return <ProgressDisplay config={config} record={record} fields={fields} />
   if (block.type === 'section') return <div className="structured-section"><span className="structured-kicker">SECTION</span><strong>{String(config.title || 'Structured section')}</strong><p>Responsive content can live here while the rest of the page stays freeform.</p></div>
+  if (block.type === 'widget') return <AtlasWidget config={config} editing={editing} databases={databases} save={save} />
   return null
 }
 
