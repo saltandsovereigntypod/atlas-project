@@ -4,10 +4,10 @@ import { createPageBlock, deletePageBlock, updatePage } from '../lib/data'
 import { PAGE_TEMPLATES, resolveTemplateConfig, type TemplateCategory } from '../lib/templates'
 import type { Database, Page, PageBlock } from '../types'
 
-type Props = { page:Page; blocks:PageBlock[]; databases:Database[]; database:Database|null; onApplied?:()=>Promise<void>|void }
+type Props = { page:Page; blocks:PageBlock[]; databases:Database[]; database:Database|null }
 const categories:Array<'All'|TemplateCategory>=['All','Witchy','Books','Budget','Podcast','Travel','Boards']
 
-export default function TemplatePanel({page,blocks,databases,database,onApplied}:Props){
+export default function TemplatePanel({page,blocks,databases,database}:Props){
   const[category,setCategory]=useState<(typeof categories)[number]>('All')
   const[query,setQuery]=useState('')
   const[busy,setBusy]=useState<string|null>(null)
@@ -35,7 +35,8 @@ export default function TemplatePanel({page,blocks,databases,database,onApplied}
         if(mode==='add') config.zIndex=Number(config.zIndex||1)+zOffset
         await createPageBlock(page.id,seed.type,(mode==='add'?blocks.length:0)+i,config)
       }
-      if(onApplied) await onApplied()
+      const refresh=(window as typeof window & {__atlasRefreshPage?:()=>Promise<void>|void}).__atlasRefreshPage
+      if(refresh) await refresh()
       setNotice(`${template.name} applied. Keep editing, move anything, or try another template.`)
     }catch(e){setError(e instanceof Error?e.message:String(e))}
     finally{setBusy(null)}
