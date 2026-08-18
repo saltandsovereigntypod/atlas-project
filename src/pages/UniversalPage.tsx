@@ -88,12 +88,18 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
       setFields(db ? await getFields(db.id) : [])
       setPage(p)
       setBlocks(nextBlocks)
+      setSelectedId(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
   }
 
   useEffect(() => { void load() }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
+  useEffect(() => {
+    const bridge = window as typeof window & { __atlasRefreshPage?: () => Promise<void> | void }
+    bridge.__atlasRefreshPage = load
+    return () => { if (bridge.__atlasRefreshPage === load) delete bridge.__atlasRefreshPage }
+  }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
   useEffect(() => () => document.body.classList.remove('atlas-editing'), [])
   useEffect(() => { document.body.classList.toggle('atlas-editing', editing); return () => document.body.classList.remove('atlas-editing') }, [editing])
 
