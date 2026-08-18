@@ -2,7 +2,7 @@ export type FieldType = 'text' | 'long_text' | 'number' | 'date' | 'checkbox' | 
 export type ViewType = 'table' | 'gallery' | 'board'
 export type LayoutSurface = 'record' | 'gallery' | 'board'
 export type PageContextType = 'home' | 'page' | 'database' | 'record'
-export type PageBlockType = 'heading' | 'text' | 'image' | 'database_view' | 'divider' | 'callout' | 'property' | 'button' | 'metric' | 'progress' | 'section'
+export type PageBlockType = 'heading' | 'text' | 'image' | 'database_view' | 'divider' | 'callout' | 'property' | 'button' | 'metric' | 'progress' | 'section' | 'widget'
 
 export interface Workspace { id: string; name: string; owner_id: string; created_at: string }
 export interface Database { id: string; workspace_id: string; name: string; description: string | null; icon: string | null; created_at: string }
