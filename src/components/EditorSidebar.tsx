@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react'
-import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BarChart3, Database, Heading, Image, Layers, Minus, MousePointer2, Palette, Plus, Quote, SlidersHorizontal, Square, Trash2, Type, Upload } from 'lucide-react'
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BarChart3, Copy, Database, Eye, EyeOff, Heading, Image, Layers, Lock, Minus, MousePointer2, Palette, Plus, Quote, SlidersHorizontal, Square, Trash2, Type, Unlock, Upload } from 'lucide-react'
 import { deleteAsset, getAssets, loadFontAsset, uploadAsset, type AtlasAsset } from '../lib/assets'
-import { deleteDatabase, deletePage, deleteRecord, getPageBlocks } from '../lib/data'
+import { deleteDatabase, deletePage, deleteRecord } from '../lib/data'
 import type { Database as DatabaseType, Field, Page, PageBlock, PageBlockType, RecordRow } from '../types'
 
 type Patch = Record<string, unknown>
@@ -11,14 +11,19 @@ type Props = {
   workspaceId: string
   userId: string
   page: Page
+  blocks: PageBlock[]
   selected: PageBlock | null
   databases: DatabaseType[]
   database: DatabaseType | null
   record: RecordRow | null
   fields: Field[]
   onAdd: (type: PageBlockType) => void
+  onAddPageTitle: () => void
+  onAddPageCover: () => void
+  onSelectBlock: (id: string | null) => void
   onSaveBlock: (id: string, patch: Patch) => void
   onDeleteBlock: (id: string) => void
+  onDuplicateBlock: (id: string) => void
   onSavePage: (patch: Partial<Page>) => void
   onSavePageSettings: (patch: Patch) => void
   onOpenData: () => void
@@ -26,46 +31,35 @@ type Props = {
 }
 
 export default function EditorSidebar(props: Props) {
-  const { page, selected } = props
+  const { page, selected, blocks } = props
   const [tab, setTab] = useState<Tab>('add')
   const [assets, setAssets] = useState<AtlasAsset[]>([])
-  const [layers, setLayers] = useState<PageBlock[]>([])
   const [assetError, setAssetError] = useState('')
   const [uploading, setUploading] = useState(false)
   const [dragLayerId, setDragLayerId] = useState<string | null>(null)
 
   const refreshAssets = async () => {
-    try {
-      setAssetError('')
-      setAssets(await getAssets(props.workspaceId))
-    } catch (e) {
-      setAssetError(e instanceof Error ? e.message : String(e))
-    }
+    try { setAssetError(''); setAssets(await getAssets(props.workspaceId)) }
+    catch (e) { setAssetError(e instanceof Error ? e.message : String(e)) }
   }
-  const refreshLayers = async () => {
-    try { setLayers(await getPageBlocks(page.id)) } catch (e) { console.error(e) }
-  }
-
   useEffect(() => { void refreshAssets() }, [props.workspaceId])
-  useEffect(() => { void refreshLayers() }, [page.id, selected?.id])
   useEffect(() => { if (selected) setTab('design') }, [selected?.id])
+
+  const orderedLayers = useMemo(() => [...blocks].sort((a, b) => num(b.config.zIndex, 1) - num(a.config.zIndex, 1)), [blocks])
+  const images = useMemo(() => assets.filter(asset => asset.kind === 'image'), [assets])
+  const fonts = useMemo(() => assets.filter(asset => asset.kind === 'font'), [assets])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null
       if (target?.matches('input, textarea, select') || target?.isContentEditable || !selected) return
-
       const step = event.shiftKey ? 10 : 1
       const x = num(selected.config.x, 0)
       const y = num(selected.config.y, 0)
       const z = num(selected.config.zIndex, 1)
 
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        event.preventDefault()
-        props.onDeleteBlock(selected.id)
-        setLayers(current => current.filter(item => item.id !== selected.id))
-        return
-      }
+      if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); props.onDeleteBlock(selected.id); return }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'd') { event.preventDefault(); props.onDuplicateBlock(selected.id); return }
       if (event.key === 'ArrowLeft') { event.preventDefault(); props.onSaveBlock(selected.id, { x: Math.max(0, x - step) }) }
       if (event.key === 'ArrowRight') { event.preventDefault(); props.onSaveBlock(selected.id, { x: x + step }) }
       if (event.key === 'ArrowUp') { event.preventDefault(); props.onSaveBlock(selected.id, { y: Math.max(0, y - step) }) }
@@ -75,11 +69,7 @@ export default function EditorSidebar(props: Props) {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selected, props.onDeleteBlock, props.onSaveBlock])
-
-  const images = useMemo(() => assets.filter(a => a.kind === 'image'), [assets])
-  const fonts = useMemo(() => assets.filter(a => a.kind === 'font'), [assets])
-  const orderedLayers = useMemo(() => [...layers].sort((a, b) => num(b.config.zIndex, 1) - num(a.config.zIndex, 1)), [layers])
+  }, [selected, props.onDeleteBlock, props.onDuplicateBlock, props.onSaveBlock])
 
   const upload = async (file: File, kind: 'image' | 'font') => {
     setUploading(true)
@@ -87,11 +77,8 @@ export default function EditorSidebar(props: Props) {
       const created = await uploadAsset(props.workspaceId, props.userId, file, kind)
       setAssets(current => [created, ...current])
       if (kind === 'font') await loadFontAsset(created)
-    } catch (e) {
-      setAssetError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setUploading(false)
-    }
+    } catch (e) { setAssetError(e instanceof Error ? e.message : String(e)) }
+    finally { setUploading(false) }
   }
 
   const applyFont = async (asset: AtlasAsset) => {
@@ -100,23 +87,15 @@ export default function EditorSidebar(props: Props) {
     props.onSaveBlock(selected.id, { fontFamily: family })
   }
 
-  const selectLayer = (id: string) => {
-    const sourceOrder = layers.findIndex(layer => layer.id === id)
-    const elements = document.querySelectorAll<HTMLElement>('.true-canvas > .canvas-element')
-    elements[sourceOrder]?.click()
-  }
-
-  const reorderLayers = async (draggedId: string, targetId: string) => {
+  const reorderLayers = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return
-    const ordered = [...orderedLayers]
-    const from = ordered.findIndex(layer => layer.id === draggedId)
-    const to = ordered.findIndex(layer => layer.id === targetId)
+    const next = [...orderedLayers]
+    const from = next.findIndex(layer => layer.id === draggedId)
+    const to = next.findIndex(layer => layer.id === targetId)
     if (from < 0 || to < 0) return
-    const [moved] = ordered.splice(from, 1)
-    ordered.splice(to, 0, moved)
-    const next = ordered.map((layer, index) => ({ ...layer, config: { ...layer.config, zIndex: ordered.length - index } }))
-    setLayers(current => current.map(layer => next.find(item => item.id === layer.id) || layer))
-    next.forEach(layer => props.onSaveBlock(layer.id, { zIndex: layer.config.zIndex }))
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    next.forEach((layer, index) => props.onSaveBlock(layer.id, { zIndex: next.length - index }))
   }
 
   return <div className="atlas-edit-rail">
@@ -124,16 +103,16 @@ export default function EditorSidebar(props: Props) {
     <div className="atlas-edit-tabs five">
       <button className={tab === 'add' ? 'active' : ''} onClick={() => setTab('add')}><Plus />Add</button>
       <button className={tab === 'design' ? 'active' : ''} onClick={() => setTab('design')}><SlidersHorizontal />Design</button>
-      <button className={tab === 'layers' ? 'active' : ''} onClick={() => { setTab('layers'); void refreshLayers() }}><Layers />Layers</button>
+      <button className={tab === 'layers' ? 'active' : ''} onClick={() => setTab('layers')}><Layers />Layers</button>
       <button className={tab === 'page' ? 'active' : ''} onClick={() => setTab('page')}><Palette />Page</button>
       <button className={tab === 'assets' ? 'active' : ''} onClick={() => setTab('assets')}><Image />Assets</button>
     </div>
     <div className="atlas-edit-scroll">
       {tab === 'add' && <AddPanel onAdd={props.onAdd} canProperty={Boolean(props.record)} />}
-      {tab === 'design' && <DesignPanel {...props} images={images} fonts={fonts} layers={layers} />}
-      {tab === 'layers' && <LayersPanel layers={orderedLayers} selectedId={selected?.id || null} onSelect={selectLayer} onDelete={async id => { props.onDeleteBlock(id); setLayers(current => current.filter(layer => layer.id !== id)) }} onDragStart={setDragLayerId} onDrop={async id => { if (dragLayerId) await reorderLayers(dragLayerId, id); setDragLayerId(null) }} />}
+      {tab === 'design' && <DesignPanel {...props} images={images} fonts={fonts} />}
+      {tab === 'layers' && <LayersPanel layers={orderedLayers} selectedId={selected?.id || null} onSelect={props.onSelectBlock} onPatch={props.onSaveBlock} onDelete={props.onDeleteBlock} onDuplicate={props.onDuplicateBlock} onDragStart={setDragLayerId} onDrop={id => { if (dragLayerId) reorderLayers(dragLayerId, id); setDragLayerId(null) }} />}
       {tab === 'page' && <PagePanel {...props} />}
-      {tab === 'assets' && <AssetsPanel images={images} fonts={fonts} uploading={uploading} error={assetError} upload={upload} onDelete={async asset => { await deleteAsset(asset); setAssets(current => current.filter(a => a.id !== asset.id)) }} applyImage={asset => selected && props.onSaveBlock(selected.id, { url: asset.public_url || '' })} applyFont={applyFont} />}
+      {tab === 'assets' && <AssetsPanel images={images} fonts={fonts} uploading={uploading} error={assetError} upload={upload} onDelete={async asset => { await deleteAsset(asset); setAssets(current => current.filter(item => item.id !== asset.id)) }} applyImage={asset => selected && props.onSaveBlock(selected.id, { url: asset.public_url || '' })} applyFont={applyFont} />}
     </div>
     <div className="atlas-edit-rail-footer"><button onClick={props.onOpenData}><Database />Open data</button></div>
   </div>
@@ -149,70 +128,91 @@ function AddPanel({ onAdd, canProperty }: { onAdd: (type: PageBlockType) => void
 function Add({ icon, label, onClick }: { icon: ReactNode; label: string; onClick: () => void }) { return <button className="atlas-add-tile" onClick={onClick}>{icon}<span>{label}</span></button> }
 function PanelTitle({ children }: { children: ReactNode }) { return <div className="atlas-edit-section-title">{children}</div> }
 
-function DesignPanel(props: Props & { images: AtlasAsset[]; fonts: AtlasAsset[]; layers: PageBlock[] }) {
-  const b = props.selected
-  if (!b) return <div className="atlas-edit-empty"><Layers /><strong>Select something on the canvas</strong><p>Its full design controls will appear here.</p></div>
-  const c = b.config
-  const save = (patch: Patch) => props.onSaveBlock(b.id, patch)
-  const isText = ['heading', 'text', 'callout'].includes(b.type)
-  const maxZ = Math.max(1, ...props.layers.map(layer => num(layer.config.zIndex, 1)))
+function DesignPanel(props: Props & { images: AtlasAsset[]; fonts: AtlasAsset[] }) {
+  const block = props.selected
+  if (!block) return <div className="atlas-edit-empty"><Layers /><strong>Select something on the canvas</strong><p>Its full design controls will appear here.</p></div>
+  const config = block.config
+  const save = (patch: Patch) => props.onSaveBlock(block.id, patch)
+  const isText = ['heading', 'text', 'callout'].includes(block.type)
+  const maxZ = Math.max(1, ...props.blocks.map(layer => num(layer.config.zIndex, 1)))
+  const boundLabel = config.systemBinding === 'page_title' ? 'Page title' : config.systemBinding === 'page_cover' ? 'Page cover' : block.type.replace('_', ' ')
+
   return <div className="atlas-design-panel">
-    <div className="atlas-selected-name"><span>{b.type.replace('_', ' ')}</span><button title="Delete selected" onClick={() => props.onDeleteBlock(b.id)}><Trash2 /></button></div>
-    <div className="atlas-shortcut-hint">Delete/Backspace deletes · Arrows nudge · Shift+Arrows moves 10px · Ctrl/Cmd+[ ] changes layer</div>
+    <div className="atlas-selected-name"><span>{boundLabel}</span><div className="atlas-selected-actions"><button title="Duplicate" onClick={() => props.onDuplicateBlock(block.id)}><Copy /></button><button title="Delete" onClick={() => props.onDeleteBlock(block.id)}><Trash2 /></button></div></div>
+    <div className="atlas-shortcut-hint">Delete deletes · Ctrl/Cmd+D duplicates · Arrows nudge · Shift+Arrows moves 10px · Ctrl/Cmd+[ ] changes layer</div>
+    <div className="atlas-lock-row"><button className={config.locked ? 'active' : ''} onClick={() => save({ locked: !config.locked })}>{config.locked ? <Lock /> : <Unlock />}{config.locked ? 'Locked' : 'Unlocked'}</button><button className={config.hidden ? 'active' : ''} onClick={() => save({ hidden: !config.hidden })}>{config.hidden ? <EyeOff /> : <Eye />}{config.hidden ? 'Hidden' : 'Visible'}</button></div>
+
     <PanelTitle>Position & size</PanelTitle>
-    <div className="atlas-control-grid four"><Control label="X"><input type="number" value={num(c.x, 0)} onChange={e => save({ x: +e.target.value })} /></Control><Control label="Y"><input type="number" value={num(c.y, 0)} onChange={e => save({ y: +e.target.value })} /></Control><Control label="W"><input type="number" value={num(c.width, 320)} onChange={e => save({ width: +e.target.value })} /></Control><Control label="H"><input type="number" value={num(c.height, 140)} onChange={e => save({ height: +e.target.value })} /></Control></div>
-    <div className="atlas-control-grid two"><Control label="Rotation"><input type="number" value={num(c.rotation, 0)} onChange={e => save({ rotation: +e.target.value })} /></Control><Control label="Layer"><input type="number" min="1" value={num(c.zIndex, 1)} onChange={e => save({ zIndex: +e.target.value })} /></Control></div>
-    <div className="atlas-layer-actions"><button onClick={() => save({ zIndex: maxZ + 1 })}>To front</button><button onClick={() => save({ zIndex: num(c.zIndex, 1) + 1 })}><ArrowUp />Forward</button><button onClick={() => save({ zIndex: Math.max(1, num(c.zIndex, 1) - 1) })}><ArrowDown />Backward</button><button onClick={() => save({ zIndex: 1 })}>To back</button></div>
+    <div className="atlas-control-grid four"><Control label="X"><input type="number" value={num(config.x, 0)} onChange={event => save({ x: +event.target.value })} /></Control><Control label="Y"><input type="number" value={num(config.y, 0)} onChange={event => save({ y: +event.target.value })} /></Control><Control label="W"><input type="number" value={num(config.width, 320)} onChange={event => save({ width: +event.target.value })} /></Control><Control label="H"><input type="number" value={num(config.height, 140)} onChange={event => save({ height: +event.target.value })} /></Control></div>
+    <div className="atlas-control-grid two"><Control label="Rotation"><input type="number" value={num(config.rotation, 0)} onChange={event => save({ rotation: +event.target.value })} /></Control><Control label="Layer"><input type="number" min="1" value={num(config.zIndex, 1)} onChange={event => save({ zIndex: +event.target.value })} /></Control></div>
+    <div className="atlas-layer-actions"><button onClick={() => save({ zIndex: maxZ + 1 })}>To front</button><button onClick={() => save({ zIndex: num(config.zIndex, 1) + 1 })}><ArrowUp />Forward</button><button onClick={() => save({ zIndex: Math.max(1, num(config.zIndex, 1) - 1) })}><ArrowDown />Backward</button><button onClick={() => save({ zIndex: 1 })}>To back</button></div>
+
     <PanelTitle>Appearance</PanelTitle>
-    <div className="atlas-control-grid two"><Control label="Background"><input type="color" value={color(c.background, '#ffffff')} onChange={e => save({ background: e.target.value })} /></Control><Control label="Text"><input type="color" value={color(c.textColor, '#211e1a')} onChange={e => save({ textColor: e.target.value })} /></Control></div>
-    <div className="atlas-control-grid two"><Control label="Corners"><input type="number" min="0" value={num(c.radius, 0)} onChange={e => save({ radius: +e.target.value })} /></Control><Control label="Padding"><input type="number" min="0" value={num(c.padding, 0)} onChange={e => save({ padding: +e.target.value })} /></Control></div>
-    {isText && <><PanelTitle>Typography</PanelTitle><Control label="Font"><select value={String(c.fontFamily || 'Georgia, serif')} onChange={e => save({ fontFamily: e.target.value })}><option value="Georgia, serif">Georgia</option><option value="Arial, sans-serif">Arial</option><option value="Verdana, sans-serif">Verdana</option><option value="'Courier New', monospace">Courier New</option>{props.fonts.map(f => <option key={f.id} value={String(f.metadata?.family || f.name)}>{f.name}</option>)}</select></Control><div className="atlas-control-grid two"><Control label="Size"><input type="number" min="8" value={num(c.fontSize, b.type === 'heading' ? 40 : 17)} onChange={e => save({ fontSize: +e.target.value })} /></Control><Control label="Weight"><select value={String(c.fontWeight || 400)} onChange={e => save({ fontWeight: +e.target.value })}><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select></Control></div><div className="atlas-control-grid two"><Control label="Line height"><input type="number" min=".6" max="3" step=".05" value={num(c.lineHeight, 1.2)} onChange={e => save({ lineHeight: +e.target.value })} /></Control><Control label="Letter spacing"><input type="number" step=".1" value={num(c.letterSpacing, 0)} onChange={e => save({ letterSpacing: +e.target.value })} /></Control></div><div className="atlas-align-row"><button className={c.textAlign === 'left' || !c.textAlign ? 'active' : ''} onClick={() => save({ textAlign: 'left' })}><AlignLeft /></button><button className={c.textAlign === 'center' ? 'active' : ''} onClick={() => save({ textAlign: 'center' })}><AlignCenter /></button><button className={c.textAlign === 'right' ? 'active' : ''} onClick={() => save({ textAlign: 'right' })}><AlignRight /></button></div></>}
-    {b.type === 'image' && <><PanelTitle>Image</PanelTitle><Control label="Fit"><select value={String(c.fit || 'cover')} onChange={e => save({ fit: e.target.value })}><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option></select></Control>{props.images.length > 0 && <div className="atlas-asset-mini-grid">{props.images.slice(0, 8).map(a => <button key={a.id} onClick={() => save({ url: a.public_url || '' })}><img src={a.public_url || ''} alt="" /></button>)}</div>}</>}
-    {b.type === 'button' && <><PanelTitle>Button</PanelTitle><Control label="Text"><input value={String(c.label || '')} onChange={e => save({ label: e.target.value })} /></Control><Control label="Link"><input value={String(c.url || '')} onChange={e => save({ url: e.target.value })} /></Control></>}
-    {b.type === 'database_view' && <><PanelTitle>Database view</PanelTitle><Control label="Source"><select value={String(c.databaseId || '')} onChange={e => save({ databaseId: e.target.value })}>{props.databases.map(db => <option key={db.id} value={db.id}>{db.name}</option>)}</select></Control><div className="atlas-control-grid two"><Control label="Display"><select value={String(c.mode || 'gallery')} onChange={e => save({ mode: e.target.value })}><option value="gallery">Gallery</option><option value="table">Table</option><option value="board">Board</option></select></Control><Control label="Record layout"><select value={String(c.recordLayoutMode || 'auto')} onChange={e => save({ recordLayoutMode: e.target.value })}><option value="auto">Auto</option><option value="freeform">Freeform</option></select></Control></div><div className="atlas-control-grid two"><Control label="Limit"><input type="number" min="1" max="100" value={num(c.limit, 12)} onChange={e => save({ limit: +e.target.value })} /></Control><Control label="Title"><input value={String(c.title || '')} onChange={e => save({ title: e.target.value })} /></Control></div></>}
-    {b.type === 'property' && props.record && <><PanelTitle>Data binding</PanelTitle><Control label="Property"><select value={String(c.fieldId || '__title__')} onChange={e => save({ fieldId: e.target.value })}><option value="__title__">Record title</option>{props.fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></Control><Control label="Label"><input value={String(c.label || '')} onChange={e => save({ label: e.target.value })} /></Control></>}
-    {b.type === 'progress' && <><PanelTitle>Progress data</PanelTitle><Control label="Label"><input value={String(c.label || '')} onChange={e => save({ label: e.target.value })} /></Control>{props.record && <Control label="Number property"><select value={String(c.fieldId || '')} onChange={e => save({ fieldId: e.target.value })}><option value="">Manual value</option>{props.fields.filter(f => f.type === 'number').map(f => <option key={f.id} value={f.id}>{f.name}</option>)}</select></Control>}<div className="atlas-control-grid two"><Control label="Value"><input type="number" disabled={Boolean(c.fieldId)} value={num(c.value, 0)} onChange={e => save({ value: +e.target.value })} /></Control><Control label="Maximum"><input type="number" min="1" value={num(c.max, 100)} onChange={e => save({ max: +e.target.value })} /></Control></div></>}
-    {b.type === 'metric' && <><PanelTitle>Metric data</PanelTitle><Control label="Label"><input value={String(c.label || '')} onChange={e => save({ label: e.target.value })} /></Control><Control label="Database"><select value={String(c.databaseId || '')} onChange={e => save({ databaseId: e.target.value })}>{props.databases.map(db => <option key={db.id} value={db.id}>{db.name}</option>)}</select></Control></>}
-    {b.type === 'section' && <><PanelTitle>Section</PanelTitle><Control label="Title"><input value={String(c.title || '')} onChange={e => save({ title: e.target.value })} /></Control></>}
+    <div className="atlas-control-grid two"><Control label="Background"><input type="color" value={color(config.background, '#ffffff')} onChange={event => save({ background: event.target.value })} /></Control><Control label="Text"><input type="color" value={color(config.textColor, '#211e1a')} onChange={event => save({ textColor: event.target.value })} /></Control></div>
+    <div className="atlas-control-grid two"><Control label="Corners"><input type="number" min="0" value={num(config.radius, 0)} onChange={event => save({ radius: +event.target.value })} /></Control><Control label="Padding"><input type="number" min="0" value={num(config.padding, 0)} onChange={event => save({ padding: +event.target.value })} /></Control></div>
+
+    {isText && <><PanelTitle>Typography</PanelTitle><Control label="Font"><select value={String(config.fontFamily || 'Georgia, serif')} onChange={event => save({ fontFamily: event.target.value })}><option value="Georgia, serif">Georgia</option><option value="Arial, sans-serif">Arial</option><option value="Verdana, sans-serif">Verdana</option><option value="'Courier New', monospace">Courier New</option>{props.fonts.map(font => <option key={font.id} value={String(font.metadata?.family || font.name)}>{font.name}</option>)}</select></Control><div className="atlas-control-grid two"><Control label="Size"><input type="number" min="8" value={num(config.fontSize, block.type === 'heading' ? 40 : 17)} onChange={event => save({ fontSize: +event.target.value })} /></Control><Control label="Weight"><select value={String(config.fontWeight || 400)} onChange={event => save({ fontWeight: +event.target.value })}><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select></Control></div><div className="atlas-control-grid two"><Control label="Line height"><input type="number" min=".6" max="3" step=".05" value={num(config.lineHeight, 1.2)} onChange={event => save({ lineHeight: +event.target.value })} /></Control><Control label="Letter spacing"><input type="number" step=".1" value={num(config.letterSpacing, 0)} onChange={event => save({ letterSpacing: +event.target.value })} /></Control></div><div className="atlas-align-row"><button className={config.textAlign === 'left' || !config.textAlign ? 'active' : ''} onClick={() => save({ textAlign: 'left' })}><AlignLeft /></button><button className={config.textAlign === 'center' ? 'active' : ''} onClick={() => save({ textAlign: 'center' })}><AlignCenter /></button><button className={config.textAlign === 'right' ? 'active' : ''} onClick={() => save({ textAlign: 'right' })}><AlignRight /></button></div></>}
+    {block.type === 'image' && <><PanelTitle>Image</PanelTitle><Control label="Fit"><select value={String(config.fit || 'cover')} onChange={event => save({ fit: event.target.value })}><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option></select></Control>{props.images.length > 0 && <div className="atlas-asset-mini-grid">{props.images.slice(0, 8).map(asset => <button key={asset.id} onClick={() => save({ url: asset.public_url || '' })}><img src={asset.public_url || ''} alt="" /></button>)}</div>}</>}
+    {block.type === 'button' && <><PanelTitle>Button</PanelTitle><Control label="Text"><input value={String(config.label || '')} onChange={event => save({ label: event.target.value })} /></Control><Control label="Link"><input value={String(config.url || '')} onChange={event => save({ url: event.target.value })} /></Control></>}
+    {block.type === 'database_view' && <><PanelTitle>Database view</PanelTitle><Control label="Source"><select value={String(config.databaseId || '')} onChange={event => save({ databaseId: event.target.value })}>{props.databases.map(db => <option key={db.id} value={db.id}>{db.name}</option>)}</select></Control><div className="atlas-control-grid two"><Control label="Display"><select value={String(config.mode || 'gallery')} onChange={event => save({ mode: event.target.value })}><option value="gallery">Gallery</option><option value="table">Table</option><option value="board">Board</option></select></Control><Control label="Record layout"><select value={String(config.recordLayoutMode || 'auto')} onChange={event => save({ recordLayoutMode: event.target.value })}><option value="auto">Auto</option><option value="freeform">Freeform</option></select></Control></div><div className="atlas-control-grid two"><Control label="Limit"><input type="number" min="1" max="100" value={num(config.limit, 12)} onChange={event => save({ limit: +event.target.value })} /></Control><Control label="Title"><input value={String(config.title || '')} onChange={event => save({ title: event.target.value })} /></Control></div></>}
+    {block.type === 'property' && props.record && <><PanelTitle>Data binding</PanelTitle><Control label="Property"><select value={String(config.fieldId || '__title__')} onChange={event => save({ fieldId: event.target.value })}><option value="__title__">Record title</option>{props.fields.map(field => <option key={field.id} value={field.id}>{field.name}</option>)}</select></Control><Control label="Label"><input value={String(config.label || '')} onChange={event => save({ label: event.target.value })} /></Control></>}
+    {block.type === 'progress' && <><PanelTitle>Progress data</PanelTitle><Control label="Label"><input value={String(config.label || '')} onChange={event => save({ label: event.target.value })} /></Control>{props.record && <Control label="Number property"><select value={String(config.fieldId || '')} onChange={event => save({ fieldId: event.target.value })}><option value="">Manual value</option>{props.fields.filter(field => field.type === 'number').map(field => <option key={field.id} value={field.id}>{field.name}</option>)}</select></Control>}<div className="atlas-control-grid two"><Control label="Value"><input type="number" disabled={Boolean(config.fieldId)} value={num(config.value, 0)} onChange={event => save({ value: +event.target.value })} /></Control><Control label="Maximum"><input type="number" min="1" value={num(config.max, 100)} onChange={event => save({ max: +event.target.value })} /></Control></div></>}
+    {block.type === 'metric' && <><PanelTitle>Metric data</PanelTitle><Control label="Label"><input value={String(config.label || '')} onChange={event => save({ label: event.target.value })} /></Control><Control label="Database"><select value={String(config.databaseId || '')} onChange={event => save({ databaseId: event.target.value })}>{props.databases.map(db => <option key={db.id} value={db.id}>{db.name}</option>)}</select></Control></>}
+    {block.type === 'section' && <><PanelTitle>Section</PanelTitle><Control label="Title"><input value={String(config.title || '')} onChange={event => save({ title: event.target.value })} /></Control></>}
   </div>
 }
 
-function LayersPanel({ layers, selectedId, onSelect, onDelete, onDragStart, onDrop }: { layers: PageBlock[]; selectedId: string | null; onSelect: (id: string) => void; onDelete: (id: string) => void; onDragStart: (id: string) => void; onDrop: (id: string) => void }) {
+function LayersPanel({ layers, selectedId, onSelect, onPatch, onDelete, onDuplicate, onDragStart, onDrop }: { layers: PageBlock[]; selectedId: string | null; onSelect: (id: string | null) => void; onPatch: (id: string, patch: Patch) => void; onDelete: (id: string) => void; onDuplicate: (id: string) => void; onDragStart: (id: string) => void; onDrop: (id: string) => void }) {
   return <div className="atlas-layers-panel">
-    <div className="atlas-layer-help"><Layers /><div><strong>Front to back</strong><span>Drag rows to reorder. Click a row to select even when the object is buried.</span></div></div>
+    <div className="atlas-layer-help"><Layers /><div><strong>Front to back</strong><span>Drag rows to reorder. Lock, hide, duplicate, select, or delete any visual element here.</span></div></div>
     {layers.length ? <div className="atlas-layer-list">{layers.map(layer => <div key={layer.id} className={`atlas-layer-row ${selectedId === layer.id ? 'active' : ''}`} draggable onDragStart={() => onDragStart(layer.id)} onDragOver={(event: DragEvent) => event.preventDefault()} onDrop={(event: DragEvent) => { event.preventDefault(); onDrop(layer.id) }}>
       <button className="atlas-layer-main" onClick={() => onSelect(layer.id)}><span className="atlas-layer-grip">⋮⋮</span><span className="atlas-layer-name">{layerName(layer)}</span><small>z {num(layer.config.zIndex, 1)}</small></button>
-      <button className="atlas-layer-delete" title="Delete element" onClick={() => onDelete(layer.id)}><Trash2 /></button>
+      <div className="atlas-layer-row-actions"><button title={layer.config.hidden ? 'Show' : 'Hide'} onClick={() => onPatch(layer.id, { hidden: !layer.config.hidden })}>{layer.config.hidden ? <EyeOff /> : <Eye />}</button><button title={layer.config.locked ? 'Unlock' : 'Lock'} onClick={() => onPatch(layer.id, { locked: !layer.config.locked })}>{layer.config.locked ? <Lock /> : <Unlock />}</button><button title="Duplicate" onClick={() => onDuplicate(layer.id)}><Copy /></button><button title="Delete" className="danger" onClick={() => onDelete(layer.id)}><Trash2 /></button></div>
     </div>)}</div> : <p className="atlas-helper">Add something to the page and it will appear here.</p>}
   </div>
 }
 
 function PagePanel(props: Props) {
-  const p = props.page
+  const page = props.page
+  const hasBoundTitle = props.blocks.some(block => block.config.systemBinding === 'page_title')
+  const hasBoundCover = props.blocks.some(block => block.config.systemBinding === 'page_cover')
+
   const deleteCurrent = async () => {
-    if (p.context_type === 'home') return
-    const label = p.context_type === 'database' ? `database “${props.database?.name || p.title}” and its records` : p.context_type === 'record' ? `record “${props.record?.title || p.title}”` : `page “${p.title}”`
+    if (page.context_type === 'home') return
+    const label = page.context_type === 'database' ? `database “${props.database?.name || page.title}” and its records` : page.context_type === 'record' ? `record “${props.record?.title || page.title}”` : `page “${page.title}”`
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return
-    if (p.context_type === 'database' && props.database) await deleteDatabase(props.database.id)
-    else if (p.context_type === 'record' && props.record) await deleteRecord(props.record.id)
-    else await deletePage(p.id)
-    window.location.hash = p.context_type === 'record' && props.database ? `#/database/${props.database.id}` : '#/'
+    if (page.context_type === 'database' && props.database) await deleteDatabase(props.database.id)
+    else if (page.context_type === 'record' && props.record) await deleteRecord(props.record.id)
+    else await deletePage(page.id)
+    window.location.hash = page.context_type === 'record' && props.database ? `#/database/${props.database.id}` : '#/'
   }
+
   return <div>
-    <PanelTitle>Page identity</PanelTitle><Control label="Title"><input value={p.title} onChange={e => props.onSavePage({ title: e.target.value })} /></Control><Control label="Icon / emoji"><input value={p.icon || ''} onChange={e => props.onSavePage({ icon: e.target.value })} /></Control><Control label="Cover image URL"><input value={p.cover || ''} onChange={e => props.onSavePage({ cover: e.target.value })} /></Control>
-    <PanelTitle>Page colors</PanelTitle><div className="atlas-control-grid two"><Control label="Background"><input type="color" value={color(p.settings?.background, '#fbfaf7')} onChange={e => props.onSavePageSettings({ background: e.target.value })} /></Control><Control label="Text"><input type="color" value={color(p.settings?.textColor, '#211e1a')} onChange={e => props.onSavePageSettings({ textColor: e.target.value })} /></Control></div><Control label="Canvas height"><input type="number" min="600" step="100" value={num(p.settings?.canvasHeight, 1100)} onChange={e => props.onSavePageSettings({ canvasHeight: +e.target.value })} /></Control><label className="atlas-check"><input type="checkbox" checked={p.settings?.showTitle !== false} onChange={e => props.onSavePageSettings({ showTitle: e.target.checked })} />Show legacy page title</label>
-    {p.context_type !== 'home' && <><PanelTitle>Danger zone</PanelTitle><button className="atlas-danger-button" onClick={() => void deleteCurrent()}><Trash2 />{p.context_type === 'database' ? 'Delete database' : p.context_type === 'record' ? 'Delete record' : 'Delete page'}</button></>}
+    <PanelTitle>Page identity</PanelTitle>
+    <Control label="Navigation title"><input value={page.title} onChange={event => props.onSavePage({ title: event.target.value })} /></Control>
+    <Control label="Sidebar icon / emoji"><input value={page.icon || ''} onChange={event => props.onSavePage({ icon: event.target.value })} /></Control>
+    <div className="atlas-page-bound-actions"><button disabled={hasBoundTitle} onClick={props.onAddPageTitle}><Heading />{hasBoundTitle ? 'Title is on canvas' : 'Add page title to canvas'}</button><button disabled={hasBoundCover} onClick={props.onAddPageCover}><Image />{hasBoundCover ? 'Cover is on canvas' : 'Add page cover to canvas'}</button></div>
+
+    <PanelTitle>Canvas background</PanelTitle>
+    <div className="atlas-control-grid two"><Control label="Color"><input type="color" value={color(page.settings?.background, '#fbfaf7')} onChange={event => props.onSavePageSettings({ background: event.target.value })} /></Control><Control label="Text"><input type="color" value={color(page.settings?.textColor, '#211e1a')} onChange={event => props.onSavePageSettings({ textColor: event.target.value })} /></Control></div>
+    <Control label="Background image URL"><input value={String(page.settings?.backgroundImage || '')} placeholder="Optional" onChange={event => props.onSavePageSettings({ backgroundImage: event.target.value })} /></Control>
+    <div className="atlas-control-grid two"><Control label="Image fit"><select value={String(page.settings?.backgroundSize || 'cover')} onChange={event => props.onSavePageSettings({ backgroundSize: event.target.value })}><option value="cover">Cover</option><option value="contain">Contain</option><option value="auto">Natural size</option><option value="100% 100%">Stretch</option></select></Control><Control label="Position"><select value={String(page.settings?.backgroundPosition || 'center')} onChange={event => props.onSavePageSettings({ backgroundPosition: event.target.value })}><option value="center">Center</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option></select></Control></div>
+    <Control label="Canvas height"><input type="number" min="600" step="100" value={num(page.settings?.canvasHeight, 1100)} onChange={event => props.onSavePageSettings({ canvasHeight: +event.target.value })} /></Control>
+
+    {page.context_type !== 'home' && <><PanelTitle>Danger zone</PanelTitle><button className="atlas-danger-button" onClick={() => void deleteCurrent()}><Trash2 />{page.context_type === 'database' ? 'Delete database' : page.context_type === 'record' ? 'Delete record' : 'Delete page'}</button></>}
   </div>
 }
 
 function AssetsPanel({ images, fonts, uploading, error, upload, onDelete, applyImage, applyFont }: { images: AtlasAsset[]; fonts: AtlasAsset[]; uploading: boolean; error: string; upload: (file: File, kind: 'image' | 'font') => void; onDelete: (asset: AtlasAsset) => void; applyImage: (asset: AtlasAsset) => void; applyFont: (asset: AtlasAsset) => void }) {
-  return <div><PanelTitle>Upload</PanelTitle><div className="atlas-upload-row"><label><Upload />Image<input type="file" accept="image/*" disabled={uploading} onChange={e => e.target.files?.[0] && upload(e.target.files[0], 'image')} /></label><label><Upload />Font<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" disabled={uploading} onChange={e => e.target.files?.[0] && upload(e.target.files[0], 'font')} /></label></div>{error && <p className="atlas-asset-error">{error}</p>}<PanelTitle>Images</PanelTitle>{images.length ? <div className="atlas-assets-grid">{images.map(a => <div key={a.id}><button className="atlas-asset-thumb" onClick={() => applyImage(a)}><img src={a.public_url || ''} alt={a.name} /></button><span>{a.name}</span><button className="atlas-asset-delete" onClick={() => onDelete(a)}><Trash2 /></button></div>)}</div> : <p className="atlas-helper">Uploaded images will live here so you can reuse them anywhere.</p>}<PanelTitle>Fonts</PanelTitle>{fonts.length ? <div className="atlas-font-list">{fonts.map(a => <div key={a.id}><button onClick={() => applyFont(a)}>{a.name}</button><button className="atlas-asset-delete" onClick={() => onDelete(a)}><Trash2 /></button></div>)}</div> : <p className="atlas-helper">Upload TTF, OTF, WOFF, or WOFF2 fonts and reuse them throughout Atlas.</p>}</div>
+  return <div><PanelTitle>Upload</PanelTitle><div className="atlas-upload-row"><label><Upload />Image<input type="file" accept="image/*" disabled={uploading} onChange={event => event.target.files?.[0] && upload(event.target.files[0], 'image')} /></label><label><Upload />Font<input type="file" accept=".ttf,.otf,.woff,.woff2,font/*" disabled={uploading} onChange={event => event.target.files?.[0] && upload(event.target.files[0], 'font')} /></label></div>{error && <p className="atlas-asset-error">{error}</p>}<PanelTitle>Images</PanelTitle>{images.length ? <div className="atlas-assets-grid">{images.map(asset => <div key={asset.id}><button className="atlas-asset-thumb" onClick={() => applyImage(asset)}><img src={asset.public_url || ''} alt={asset.name} /></button><span>{asset.name}</span><button className="atlas-asset-delete" onClick={() => onDelete(asset)}><Trash2 /></button></div>)}</div> : <p className="atlas-helper">Uploaded images live here so you can reuse them anywhere.</p>}<PanelTitle>Fonts</PanelTitle>{fonts.length ? <div className="atlas-font-list">{fonts.map(asset => <div key={asset.id}><button onClick={() => applyFont(asset)}>{asset.name}</button><button className="atlas-asset-delete" onClick={() => onDelete(asset)}><Trash2 /></button></div>)}</div> : <p className="atlas-helper">Upload TTF, OTF, WOFF, or WOFF2 fonts and reuse them throughout Atlas.</p>}</div>
 }
 
 function Control({ label, children }: { label: string; children: ReactNode }) { return <label className="atlas-edit-control"><span>{label}</span>{children}</label> }
-function num(value: unknown, fallback: number) { const n = Number(value); return Number.isFinite(n) ? n : fallback }
-function color(value: unknown, fallback: string) { const s = String(value || ''); return /^#[0-9a-fA-F]{6}$/.test(s) ? s : fallback }
+function num(value: unknown, fallback: number) { const number = Number(value); return Number.isFinite(number) ? number : fallback }
+function color(value: unknown, fallback: string) { const text = String(value || ''); return /^#[0-9a-fA-F]{6}$/.test(text) ? text : fallback }
 function layerName(layer: PageBlock) {
+  if (layer.config.systemBinding === 'page_title') return 'Page title'
+  if (layer.config.systemBinding === 'page_cover') return 'Page cover'
   if (layer.type === 'heading' || layer.type === 'text' || layer.type === 'callout') return String(layer.config.text || layer.type)
   if (layer.type === 'database_view') return String(layer.config.title || 'Database view')
   if (layer.type === 'button') return String(layer.config.label || 'Button')
