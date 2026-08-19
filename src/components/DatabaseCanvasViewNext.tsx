@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Database, LayoutGrid, List, PanelsTopLeft, Rows3, Sparkles } from 'lucide-react'
-import LegacyDatabaseCanvasView from './DatabaseCanvasView'
+import LegacyDatabaseCanvasView from './DatabaseCanvasViewLegacy'
 import CanvasCardView, { ensureCanvasCardTemplate } from './CanvasCardView'
 import { createRecord, getFields, getRecords, updateRecord } from '../lib/data'
 import type { Database as DatabaseType, Field, RecordRow } from '../types'
