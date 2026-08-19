@@ -35,7 +35,9 @@ export default function AtlasShell({children}:PropsWithChildren){
     <div className="atlas-sidebar-footer">{!collapsed&&<button className="atlas-guide-button" onClick={()=>setGuideOpen(true)}><CircleHelp/>Guide</button>}{!collapsed&&<button><Settings/>Settings</button>}<button onClick={()=>supabase.auth.signOut()}><LogOut/>{!collapsed&&'Sign out'}</button></div>
    </div>
    <div id="atlas-editor-sidebar-host" className="atlas-editor-sidebar-host" />
-  </aside><section className="atlas-workspace">{children}</section><AtlasTutorial open={guideOpen} onClose={()=>setGuideOpen(false)} onComplete={completeGuide}/>
+  </aside>
+  {collapsed&&<button className="atlas-nav-reopen" onClick={()=>setCollapsed(false)} title="Open navigation"><ChevronRight/><span>Open navigation</span></button>}
+  <section className="atlas-workspace">{children}</section><AtlasTutorial open={guideOpen} onClose={()=>setGuideOpen(false)} onComplete={completeGuide}/>
  </div>
 }
 function SidebarSection({label,icon,open,onToggle,action,children}:{label:string;icon?:ReactNode;open:boolean;onToggle:()=>void;action?:ReactNode;children:ReactNode}){return <div className="atlas-sidebar-section"><div className="atlas-section-head"><button onClick={onToggle}>{open?<ChevronDown/>:<ChevronRight/>}{icon}{label}</button>{action}</div>{open&&<div className="atlas-section-body">{children}</div>}</div>}
