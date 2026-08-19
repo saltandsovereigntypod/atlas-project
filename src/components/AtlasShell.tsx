@@ -12,6 +12,7 @@ export default function AtlasShell({children}:PropsWithChildren){
  const guideKey=`atlas-guide-complete:${user.id}`
  const refresh=async()=>{const[p,d]=await Promise.all([getPages(workspace.id),getDatabases(workspace.id)]);setPages(p);setDatabases(d)}
  useEffect(()=>{refresh().catch(console.error)},[workspace.id,location.pathname])
+ useEffect(()=>{const handler=()=>{refresh().catch(console.error)};window.addEventListener('atlas-workspace-changed',handler);return()=>window.removeEventListener('atlas-workspace-changed',handler)},[workspace.id])
  useEffect(()=>{try{if(!localStorage.getItem(guideKey))setGuideOpen(true)}catch{}},[guideKey])
  const regularPages=useMemo(()=>pages.filter(p=>p.context_type==='page'),[pages]);const favoritePages=useMemo(()=>regularPages.filter(p=>p.favorite),[regularPages]);const favoriteDatabases=useMemo(()=>databases.filter(d=>d.favorite),[databases]);const filtered=useMemo(()=>{const q=query.trim().toLowerCase();if(!q)return regularPages;return regularPages.filter(p=>p.title.toLowerCase().includes(q))},[regularPages,query])
  const addPage=async(parent_id:string|null=null)=>{const siblings=regularPages.filter(p=>p.parent_id===parent_id);const p=await createPage(workspace.id,'Untitled page',siblings.length,parent_id);if(parent_id)setOpenNodes(x=>({...x,[parent_id]:true}));await refresh();navigate(`/page/${p.id}`)}
