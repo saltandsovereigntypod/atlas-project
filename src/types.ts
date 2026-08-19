@@ -5,7 +5,7 @@ export type PageContextType = 'home' | 'page' | 'database' | 'record'
 export type PageBlockType = 'heading' | 'text' | 'image' | 'database_view' | 'divider' | 'callout' | 'property' | 'button' | 'metric' | 'progress' | 'section' | 'widget'
 
 export interface Workspace { id: string; name: string; owner_id: string; created_at: string }
-export interface Database { id: string; workspace_id: string; name: string; description: string | null; icon: string | null; created_at: string }
+export interface Database { id: string; workspace_id: string; name: string; description: string | null; icon: string | null; favorite: boolean; created_at: string }
 export interface Field { id: string; database_id: string; name: string; type: FieldType; position: number; required: boolean; config: Record<string, unknown>; created_at: string }
 export interface RecordRow { id: string; database_id: string; title: string; data: Record<string, unknown>; created_at: string; updated_at: string }
 export interface DatabaseView { id: string; database_id: string; name: string; type: ViewType; position: number; config: Record<string, unknown>; created_at: string; updated_at: string }
