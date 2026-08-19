@@ -2,6 +2,7 @@ import { getFields, getRecords, updateRecord } from './data'
 
 const wired = new WeakSet<HTMLElement>()
 const useModeWired = new WeakSet<HTMLElement>()
+let fitFrame = 0
 
 function selectAllText(el: HTMLElement) {
   const selection = window.getSelection()
@@ -25,6 +26,44 @@ function ensureCaptureStatus(capture: HTMLElement) {
     capture.appendChild(status)
   }
   return status
+}
+
+function fitViewCanvases() {
+  document.querySelectorAll<HTMLElement>('.true-canvas').forEach(canvas => {
+    const page = canvas.closest<HTMLElement>('.canvas-first')
+    const editing = page?.classList.contains('is-editing') || document.body.classList.contains('atlas-editing')
+    const style = canvas.style as CSSStyleDeclaration & { zoom?: string }
+    if (editing) {
+      style.zoom = ''
+      canvas.style.width = '100%'
+      canvas.dataset.atlasFit = 'editing'
+      return
+    }
+    const host = canvas.parentElement
+    const available = Math.max(1, host?.clientWidth || canvas.clientWidth || window.innerWidth)
+    let contentWidth = available
+    canvas.querySelectorAll<HTMLElement>(':scope > .canvas-element').forEach(element => {
+      if (getComputedStyle(element).display === 'none') return
+      const left = Number.parseFloat(element.style.left) || element.offsetLeft || 0
+      const width = element.getBoundingClientRect().width / (Number(style.zoom || 1) || 1) || element.offsetWidth || 0
+      contentWidth = Math.max(contentWidth, left + width + 24)
+    })
+    const scale = Math.min(1, available / Math.max(available, contentWidth))
+    if (scale < .998) {
+      canvas.style.width = `${contentWidth}px`
+      style.zoom = String(scale)
+      canvas.dataset.atlasFit = scale.toFixed(3)
+    } else {
+      style.zoom = ''
+      canvas.style.width = '100%'
+      canvas.dataset.atlasFit = '1'
+    }
+  })
+}
+
+function scheduleCanvasFit() {
+  window.cancelAnimationFrame(fitFrame)
+  fitFrame = window.requestAnimationFrame(fitViewCanvases)
 }
 
 function wireCanvasText(root: ParentNode = document) {
@@ -222,12 +261,19 @@ function wire(root: ParentNode = document) {
   wireQuickCapture(root)
   wireInlineRecordTitles(root)
   root.querySelectorAll<HTMLElement>('.widget-kanban').forEach(kanban => void hydrateKanban(kanban))
+  scheduleCanvasFit()
 }
 
 export function installDirectCanvasEditing() {
   if (typeof document === 'undefined') return () => {}
   wire()
   const observer = new MutationObserver(() => wire())
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['contenteditable', 'readonly'] })
-  return () => observer.disconnect()
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['contenteditable', 'readonly', 'class', 'style'] })
+  const resize = () => scheduleCanvasFit()
+  window.addEventListener('resize', resize)
+  return () => {
+    observer.disconnect()
+    window.removeEventListener('resize', resize)
+    window.cancelAnimationFrame(fitFrame)
+  }
 }
