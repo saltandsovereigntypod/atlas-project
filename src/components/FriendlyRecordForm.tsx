@@ -60,8 +60,18 @@ export default function FriendlyRecordForm({ database, onSaved, compact = false 
   return <div className={`friendly-record-form ${compact ? 'compact' : ''}`}>
     <div className="friendly-form-head"><div><span>ADD TO</span><strong>{database.name}</strong></div><Plus/></div>
     <label className="friendly-field"><span>{titleLabel}</span><input value={title} onChange={event => setTitle(event.target.value)} placeholder={titleLabel} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) void submit() }} /></label>
-    <div className="friendly-form-fields">{visibleFields.map(field => <label className={`friendly-field field-${field.type}`} key={field.id}><span>{field.name}</span><FieldInput field={field} value={values[field.id]} onChange={value => setValues(current => ({ ...current, [field.id]: value }))} /></label>)}</div>
+    <div className="friendly-form-fields">{visibleFields.map(field => <FriendlyField key={field.id} field={field} value={values[field.id]} onChange={value => setValues(current => ({ ...current, [field.id]: value }))}/>)}</div>
     {error && <p className="atlas-asset-error">{error}</p>}
     <button className={`friendly-form-submit ${saved ? 'saved' : ''}`} disabled={busy || !title.trim()} onClick={() => void submit()}>{saved ? <><Check/>Saved</> : <><Plus/>{busy ? 'Saving…' : `Add to ${database.name}`}</>}</button>
   </div>
+}
+
+function FriendlyField({ field, value, onChange }: { field: Field; value: unknown; onChange: (value: unknown) => void }) {
+  const options = Array.isArray(field.config?.options) ? field.config.options as string[] : []
+  if (field.type === 'select' && !options.length) return <label className="friendly-field field-select"><span>{field.name}</span><input value={String(value ?? '')} placeholder={`Type ${field.name.toLowerCase()}…`} onChange={event => onChange(event.target.value)}/><small>Add formal dropdown choices later if you want them.</small></label>
+  if (field.type === 'multi_select' && !options.length) {
+    const text = Array.isArray(value) ? value.join(', ') : String(value ?? '')
+    return <label className="friendly-field field-multi_select"><span>{field.name}</span><input value={text} placeholder="Separate items with commas" onChange={event => onChange(event.target.value.split(',').map(item => item.trim()).filter(Boolean))}/><small>Comma-separated for now. You can turn these into preset choices later.</small></label>
+  }
+  return <label className={`friendly-field field-${field.type}`}><span>{field.name}</span><FieldInput field={field} value={value} onChange={onChange}/></label>
 }
