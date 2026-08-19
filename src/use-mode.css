@@ -1,0 +1,22 @@
+/* Use mode: pages stay interactive without looking like edit mode. */
+.atlas-use-editable{cursor:text!important;outline:none!important}
+.atlas-use-editable:hover{background:color-mix(in srgb,var(--widget-surface,#fff) 84%,var(--widget-accent) 5%)!important}
+.atlas-use-editable:focus{border-color:color-mix(in srgb,var(--widget-accent) 45%,var(--widget-border))!important;background:var(--widget-surface,#fff)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--widget-accent) 10%,transparent)}
+
+.widget-capture{position:relative}
+.atlas-capture-status{position:absolute;left:3px;bottom:-18px;font-size:10px;letter-spacing:.02em;color:var(--widget-muted);opacity:.9;white-space:nowrap}
+.atlas-capture-status.saved{color:var(--widget-accent);font-weight:650}
+
+.widget-kanban>div{transition:background .15s,border-color .15s,transform .15s;border:1px solid transparent}
+.widget-kanban>div.atlas-kanban-dropzone{min-height:72px}
+.widget-kanban>div.is-drag-over{background:color-mix(in srgb,var(--widget-accent) 11%,var(--widget-surface,#fff));border-color:color-mix(in srgb,var(--widget-accent) 35%,transparent)}
+.widget-kanban a[draggable=true]{cursor:grab;transition:transform .12s,box-shadow .12s,opacity .12s}
+.widget-kanban a[draggable=true]:hover{transform:translateY(-1px);box-shadow:0 5px 16px rgba(35,29,25,.08)}
+.widget-kanban a.is-dragging{opacity:.45;cursor:grabbing}
+
+.atlas-inline-record-edit{border:0;background:transparent;color:var(--widget-muted,#8a7e72);font:600 9px/1 inherit;padding:2px 4px;border-radius:5px;opacity:0;transition:opacity .12s,background .12s;cursor:pointer}
+.widget-record-list:hover .atlas-inline-record-edit,.widget-featured:hover .atlas-inline-record-edit,.widget-mini-table:hover .atlas-inline-record-edit{opacity:.72}
+.atlas-inline-record-edit:hover{opacity:1!important;background:color-mix(in srgb,var(--widget-muted) 10%,transparent)}
+.is-inline-editing{outline:1px solid color-mix(in srgb,var(--widget-accent) 45%,transparent);outline-offset:2px;border-radius:4px;background:var(--widget-surface,#fff)!important}
+
+body:not(.atlas-editing) .widget-list input,body:not(.atlas-editing) .widget-list button,body:not(.atlas-editing) .widget-capture input,body:not(.atlas-editing) .widget-capture button,body:not(.atlas-editing) .widget-form input,body:not(.atlas-editing) .widget-form button,body:not(.atlas-editing) .widget-kanban a{pointer-events:auto}
