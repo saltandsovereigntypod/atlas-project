@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Database as DatabaseIcon, Layers3, LayoutTemplate, Link2, Palette, Plus, Search, Sparkles, WandSparkles, X } from 'lucide-react'
-import { createDatabase, createField, createPageBlock, deletePageBlock, updatePage, updatePageBlock } from '../lib/data'
+import { createDatabase, createField, createPageBlock, deleteDatabase, deletePageBlock, getDatabases, updatePage, updatePageBlock } from '../lib/data'
 import { DATA_KITS, SECTION_PRESETS, STYLE_PACKS, resolveCreativeConfig, type StylePack } from '../lib/creativePresets'
 import { PAGE_TEMPLATES, resolveTemplateConfig, type TemplateCategory, type TemplateBlock } from '../lib/templates'
 import type { Database, FieldType, Page, PageBlock } from '../types'
@@ -51,12 +51,23 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
   const kitItems = useMemo(() => DATA_KITS.filter(item => !query.trim() || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [query])
 
   const refresh = async () => { const fn = (window as typeof window & { __atlasRefreshPage?: () => Promise<void> | void }).__atlasRefreshPage; if (fn) await fn() }
+  const refreshWorkspace = () => window.dispatchEvent(new Event('atlas-workspace-changed'))
   const clearMessages = () => { setError(''); setNotice('') }
 
   const createCollection = async (name:string, fields:Array<{name:string;type:FieldType}>) => {
     const created = await createDatabase(page.workspace_id, name)
-    for (let i=0;i<fields.length;i++) await createField(created.id,{name:fields[i].name,type:fields[i].type,required:false,config:{}},i+1)
-    return created
+    try {
+      for (let i=0;i<fields.length;i++) await createField(created.id,{name:fields[i].name,type:fields[i].type,required:false,config:{}},i+1)
+      const visible = await getDatabases(page.workspace_id)
+      const verified = visible.find(item => item.id === created.id)
+      if (!verified) throw new Error(`Atlas created ${name}, but could not read it back from the workspace.`)
+      refreshWorkspace()
+      return verified
+    } catch (error) {
+      try { await deleteDatabase(created.id) } catch {}
+      refreshWorkspace()
+      throw error
+    }
   }
 
   const createSource = async () => {
@@ -65,7 +76,7 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
     setBusy('source'); clearMessages()
     try {
       const created = await createCollection(sourceName.trim(), preset.fields)
-      setPreferredDb(created.id); await refresh(); setNotice(`${created.name} is ready.`); setSourceOpen(false)
+      setPreferredDb(created.id); await refresh(); refreshWorkspace(); setNotice(`${created.name} is ready.`); setSourceOpen(false)
     } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setBusy(null) }
   }
 
@@ -90,7 +101,7 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
 
   const createKit = async (kitId:string) => {
     setBusy(`kit:${kitId}`);clearMessages()
-    try{const result=await ensureKit(kitId);if(result.firstId)setPreferredDb(result.firstId);await refresh();setNotice(result.createdNames.length?`Created ${result.createdNames.join(', ')}.`:'Those collections already exist. Atlas left them alone.')}
+    try{const result=await ensureKit(kitId);if(result.firstId)setPreferredDb(result.firstId);await refresh();refreshWorkspace();setNotice(result.createdNames.length?`Created ${result.createdNames.join(', ')}.`:'Those collections already exist. Atlas left them alone.')}
     catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(null)}
   }
 
@@ -119,7 +130,7 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
         if(applyMode==='add')config.zIndex=Number(config.zIndex||1)+zOffset
         await createPageBlock(page.id,seed.type,(applyMode==='add'?blocks.length:0)+i,config)
       }
-      await refresh();setPendingTemplate(null)
+      await refresh();refreshWorkspace();setPendingTemplate(null)
       setNotice(`${template.name} applied. Every data connection can still be changed from the element itself.`)
     }catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(null)}
   }
@@ -129,12 +140,22 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
     setBusy(`connections:${pendingTemplate.templateId}`);clearMessages()
     try{
       const resolved:Record<string,string>={}
+      const createdNames:string[]=[]
       for(const req of pendingTemplate.requirements){
         const choice=connections[req.key]||''
-        if(choice==='__create__'){const created=await createCollection(req.name,req.fields);resolved[req.key]=created.id}
-        else resolved[req.key]=choice
+        if(choice==='__create__'){
+          const created=await createCollection(req.name,req.fields)
+          resolved[req.key]=created.id
+          createdNames.push(created.name)
+        } else resolved[req.key]=choice
       }
+      const visible = await getDatabases(page.workspace_id)
+      for (const [key,id] of Object.entries(resolved)) {
+        if (id && !visible.some(item => item.id === id)) throw new Error(`The selected data source for ${key} is not available in this workspace.`)
+      }
+      refreshWorkspace()
       await refresh()
+      if (createdNames.length) setNotice(`Created ${createdNames.join(' and ')}. Applying the template now…`)
       await applyResolvedTemplate(pendingTemplate.templateId,pendingTemplate.applyMode,resolved)
     }catch(e){setError(e instanceof Error?e.message:String(e));setBusy(null)}
   }
