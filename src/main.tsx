@@ -9,6 +9,7 @@ import './canvas-first.css'
 import './database-canvas.css'
 import './editor-sidebar.css'
 import './editor-sidebar-plus.css'
+import './editor-ux.css'
 import './widgets.css'
 import './tutorial.css'
 
