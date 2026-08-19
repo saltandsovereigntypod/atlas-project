@@ -10,6 +10,7 @@ import './database-canvas.css'
 import './editor-sidebar.css'
 import './editor-sidebar-plus.css'
 import './widgets.css'
+import './tutorial.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>,
