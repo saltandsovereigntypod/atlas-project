@@ -20,6 +20,7 @@ import './widgets.css'
 import './tutorial.css'
 import './database-picker-fix.css'
 import './layout-fixes.css'
+import './template-connections.css'
 
 installDirectCanvasEditing()
 
