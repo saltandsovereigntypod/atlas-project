@@ -295,3 +295,54 @@
 .db-relation-picker > button{
   min-width:0!important;
 }
+
+/* Respect the user's saved column width instead of letting table content impose a larger intrinsic width. */
+.db-sheet{
+  table-layout:fixed!important;
+  width:max-content!important;
+  min-width:0!important;
+}
+
+.db-sheet th,
+.db-sheet td{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:none!important;
+}
+
+.db-sheet th.db-field-header,
+.db-sheet td:not(.db-row-index):not(.db-actions-column):not(.db-add-field-column),
+.db-sheet th.db-title-column,
+.db-sheet td.db-title-column{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+
+.db-field-header-summary{
+  width:100%!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  padding-left:3px!important;
+  padding-right:3px!important;
+}
+
+.db-field-header-summary > svg:first-child{
+  min-width:0!important;
+}
+
+.db-field-header-summary > span,
+.db-field-header-summary strong,
+.db-built-in-header > span,
+.db-built-in-header strong,
+.db-title-column input,
+.db-cell-input,
+.db-tag-display,
+.db-relation-picker > button{
+  max-width:100%!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+.db-tag-display{
+  flex-wrap:nowrap!important;
+}
