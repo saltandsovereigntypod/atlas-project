@@ -12,6 +12,7 @@ import './editor-sidebar.css'
 import './editor-sidebar-plus.css'
 import './editor-ux.css'
 import './data-editor.css'
+import './database-workspace.css'
 import './widgets.css'
 import './tutorial.css'
 
