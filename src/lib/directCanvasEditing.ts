@@ -28,15 +28,24 @@ function ensureCaptureStatus(capture: HTMLElement) {
 }
 
 function wireCanvasText(root: ParentNode = document) {
-  root.querySelectorAll<HTMLElement>('.canvas-editable-text[contenteditable="true"]').forEach(el => {
+  root.querySelectorAll<HTMLElement>('.canvas-editable-text').forEach(el => {
     if (wired.has(el)) return
     wired.add(el)
     el.title = 'Double-click to edit text'
-    el.addEventListener('pointerdown', event => event.stopPropagation())
+    el.addEventListener('pointerdown', event => {
+      if (el.contentEditable === 'true') event.stopPropagation()
+    })
     el.addEventListener('dblclick', event => {
+      event.preventDefault()
       event.stopPropagation()
+      el.contentEditable = 'true'
+      el.classList.add('atlas-inline-canvas-edit')
       el.focus()
       selectAllText(el)
+    })
+    el.addEventListener('blur', () => {
+      el.classList.remove('atlas-inline-canvas-edit')
+      if (!document.body.classList.contains('atlas-editing')) el.contentEditable = 'false'
     })
     el.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
