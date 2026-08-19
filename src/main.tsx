@@ -23,6 +23,7 @@ import './database-picker-fix.css'
 import './layout-fixes.css'
 import './template-connections.css'
 import './use-mode.css'
+import './live-view-v2.css'
 
 installTemplateEnhancements()
 installDirectCanvasEditing()
