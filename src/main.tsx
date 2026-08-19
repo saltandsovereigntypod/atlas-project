@@ -14,6 +14,7 @@ import './editor-ux.css'
 import './data-editor.css'
 import './database-workspace.css'
 import './database-context.css'
+import './embedded-database.css'
 import './widgets.css'
 import './tutorial.css'
 
