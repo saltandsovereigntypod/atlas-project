@@ -268,7 +268,7 @@ export function installDirectCanvasEditing() {
   if (typeof document === 'undefined') return () => {}
   wire()
   const observer = new MutationObserver(() => wire())
-  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['contenteditable', 'readonly', 'class', 'style'] })
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['contenteditable', 'readonly', 'class'] })
   const resize = () => scheduleCanvasFit()
   window.addEventListener('resize', resize)
   return () => {
