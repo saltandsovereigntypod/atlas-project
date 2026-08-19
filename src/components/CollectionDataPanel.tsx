@@ -63,8 +63,9 @@ export default function CollectionDataPanel({page,database,databases,onOpenData}
  const active=databases.find(item=>item.id===activeId)||database||null
  const refreshFields=async()=>{if(!active?.id){setFields([]);return}try{setFields(await getFields(active.id))}catch(e){setError(e instanceof Error?e.message:String(e))}}
  useEffect(()=>{void refreshFields()},[active?.id])
+ const editableFields=useMemo(()=>fields.filter(field=>field.name.trim().toLowerCase()!=='name'),[fields])
  const suggestions=useMemo(()=>suggestionsFor(active?.name||''),[active?.name])
- const existing=useMemo(()=>new Set(fields.map(f=>f.name.trim().toLowerCase())),[fields])
+ const existing=useMemo(()=>new Set(editableFields.map(f=>f.name.trim().toLowerCase())),[editableFields])
  const missing=suggestions.filter(item=>!existing.has(item.name.toLowerCase()))
  const refreshPage=async()=>{const fn=(window as typeof window&{__atlasRefreshPage?:()=>Promise<void>|void}).__atlasRefreshPage;if(fn)await fn()}
  const addField=async(name:string,type:FieldType)=>{if(!active||!name.trim())return;setBusy(true);setError('');setNotice('');try{await createField(active.id,{name:name.trim(),type,required:false,config:{}},fields.length);setNewName('');await refreshFields();setNotice(`${name.trim()} added to ${active.name}.`) }catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}}
@@ -76,9 +77,10 @@ export default function CollectionDataPanel({page,database,databases,onOpenData}
   {!active&&<div className="collection-create-inline"><input value={newCollection} onChange={e=>setNewCollection(e.target.value)} placeholder="What do you want to track?"/><button disabled={busy||!newCollection.trim()} onClick={()=>void createCollection()}><Plus/>Create collection</button></div>}
   {active&&<>
    <section className="data-panel-section quick-add-section"><div className="data-panel-heading"><Sparkles/><div><strong>Quick add</strong><span>Atlas reads the fields in {active.name} and builds this form automatically.</span></div></div><FriendlyRecordForm database={active} compact onSaved={refreshPage}/></section>
-   <section className="data-panel-section schema-section"><div className="data-panel-heading"><DatabaseIcon/><div><strong>What does {active.name} track?</strong><span>The title/name is built into every record. Everything below is yours to define.</span></div></div>
+   <section className="data-panel-section schema-section"><div className="data-panel-heading"><DatabaseIcon/><div><strong>What does {active.name} track?</strong><span>Every record has one built-in title/name. Add any other information you want below.</span></div></div>
+    <div className="schema-built-in"><span><strong>Title / Name</strong><small>Built in · required</small></span></div>
     {missing.length>0&&<div className="schema-suggestions"><div><WandSparkles/><span><strong>Suggested for {active.name}</strong><small>Use all of these, pick a few, or ignore them completely.</small></span></div><div className="schema-chip-list">{missing.map(item=><button key={item.name} disabled={busy} onClick={()=>void addField(item.name,item.type)}><Plus/>{item.name}<small>{typeLabel(item.type)}</small></button>)}</div><button className="schema-add-all" disabled={busy} onClick={()=>void createSuggested()}><WandSparkles/>Add all suggestions</button></div>}
-    <div className="schema-existing">{fields.map(field=><FieldRow key={field.id} field={field} onChanged={refreshFields}/>)}</div>
+    <div className="schema-existing">{editableFields.map(field=><FieldRow key={field.id} field={field} onChanged={refreshFields}/>)}</div>
     <button className="schema-builder-toggle" onClick={()=>setShowBuilder(v=>!v)}><Plus/>Add your own field<ChevronDown className={showBuilder?'open':''}/></button>
     {showBuilder&&<div className="schema-builder"><label><span>Field name</span><input autoFocus value={newName} onChange={e=>setNewName(e.target.value)} placeholder="Started rereading, Moon cycle, Money spent…"/></label><label><span>What kind of information?</span><select value={newType} onChange={e=>setNewType(e.target.value as FieldType)}>{TYPES.map(type=><option key={type.value} value={type.value}>{type.label} · {type.help}</option>)}</select></label><button disabled={busy||!newName.trim()} onClick={()=>void addField(newName,newType)}><Plus/>Add field</button></div>}
     <button className="open-raw-data" onClick={onOpenData}><DatabaseIcon/>Open all {active.name} records</button>
