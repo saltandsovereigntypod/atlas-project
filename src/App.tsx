@@ -6,6 +6,7 @@ import { ensureWorkspace } from './lib/data'
 import type { Workspace } from './types'
 import AuthPage from './pages/AuthPage'
 import UniversalPage from './pages/UniversalPage'
+import DatabaseWorkspace from './pages/DatabaseWorkspace'
 import AtlasShell from './components/AtlasShell'
 
 interface AppContextValue { user:User; workspace:Workspace; refreshWorkspace:()=>Promise<void> }
@@ -21,4 +22,4 @@ function ProtectedLayout(){
  return <AppContext.Provider value={{user:session.user,workspace,refreshWorkspace:()=>loadWorkspace(session.user)}}><AtlasShell><Outlet/></AtlasShell></AppContext.Provider>
 }
 function MissingConfig(){return <div className="center-screen setup-card"><div className="brand-mark">A</div><h1>Atlas needs Supabase</h1><p>Add the Supabase URL and publishable key, then run migrations through <code>004_universal_pages.sql</code>.</p></div>}
-export default function App(){return <Routes><Route path="/login" element={<AuthPage/>}/><Route element={<ProtectedLayout/>}><Route path="/" element={<UniversalPage kind="home"/>}/><Route path="/page/:pageId" element={<UniversalPage kind="page"/>}/><Route path="/database/:databaseId" element={<UniversalPage kind="database"/>}/><Route path="/database/:databaseId/record/:recordId" element={<UniversalPage kind="record"/>}/></Route><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
+export default function App(){return <Routes><Route path="/login" element={<AuthPage/>}/><Route element={<ProtectedLayout/>}><Route path="/" element={<UniversalPage kind="home"/>}/><Route path="/page/:pageId" element={<UniversalPage kind="page"/>}/><Route path="/database/:databaseId" element={<DatabaseWorkspace/>}/><Route path="/database/:databaseId/page" element={<UniversalPage kind="database"/>}/><Route path="/database/:databaseId/record/:recordId" element={<UniversalPage kind="record"/>}/></Route><Route path="*" element={<Navigate to="/" replace/>}/></Routes>}
