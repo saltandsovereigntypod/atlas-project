@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { installDirectCanvasEditing } from './lib/directCanvasEditing'
+import { installTemplateEnhancements } from './lib/templateEnhancements'
 import './styles.css'
 import './atlas.css'
 import './navigation.css'
@@ -23,6 +24,7 @@ import './layout-fixes.css'
 import './template-connections.css'
 import './use-mode.css'
 
+installTemplateEnhancements()
 installDirectCanvasEditing()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
