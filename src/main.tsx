@@ -13,6 +13,7 @@ import './editor-sidebar-plus.css'
 import './editor-ux.css'
 import './data-editor.css'
 import './database-workspace.css'
+import './database-context.css'
 import './widgets.css'
 import './tutorial.css'
 
