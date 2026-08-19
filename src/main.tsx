@@ -18,6 +18,7 @@ import './database-context.css'
 import './embedded-database.css'
 import './widgets.css'
 import './tutorial.css'
+import './database-picker-fix.css'
 
 installDirectCanvasEditing()
 
