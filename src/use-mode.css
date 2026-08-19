@@ -2,6 +2,8 @@
 .atlas-use-editable{cursor:text!important;outline:none!important}
 .atlas-use-editable:hover{background:color-mix(in srgb,var(--widget-surface,#fff) 84%,var(--widget-accent) 5%)!important}
 .atlas-use-editable:focus{border-color:color-mix(in srgb,var(--widget-accent) 45%,var(--widget-border))!important;background:var(--widget-surface,#fff)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--widget-accent) 10%,transparent)}
+.canvas-editable-text{cursor:text}
+.canvas-editable-text.atlas-inline-canvas-edit{outline:1px dashed color-mix(in srgb,currentColor 32%,transparent);outline-offset:5px;border-radius:5px}
 
 .widget-capture{position:relative}
 .atlas-capture-status{position:absolute;left:3px;bottom:-18px;font-size:10px;letter-spacing:.02em;color:var(--widget-muted);opacity:.9;white-space:nowrap}
