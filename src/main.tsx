@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { installDirectCanvasEditing } from './lib/directCanvasEditing'
 import { installTemplateEnhancements } from './lib/templateEnhancements'
+import { installTemplateLiveViews } from './lib/templateLiveViews'
 import './styles.css'
 import './atlas.css'
 import './navigation.css'
@@ -26,6 +27,7 @@ import './use-mode.css'
 import './live-view-v2.css'
 
 installTemplateEnhancements()
+installTemplateLiveViews()
 installDirectCanvasEditing()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
