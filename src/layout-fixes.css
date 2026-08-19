@@ -1,0 +1,76 @@
+/* Shell and freeform page containment fixes. Keep this stylesheet last. */
+.atlas-shell,
+.atlas-workspace,
+.atlas-page,
+.canvas-first{
+  min-width:0;
+  max-width:100%;
+}
+
+.atlas-workspace{
+  position:relative;
+  overflow-x:hidden;
+}
+
+.atlas-nav-reopen{
+  position:fixed;
+  left:72px;
+  top:12px;
+  z-index:5000;
+  height:36px;
+  max-width:40px;
+  padding:0 10px;
+  border:1px solid #d9d0c4;
+  border-radius:9px;
+  background:#fbfaf7;
+  color:#322d27;
+  box-shadow:0 8px 24px rgba(45,35,25,.12);
+  display:flex;
+  align-items:center;
+  gap:7px;
+  overflow:hidden;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:max-width .16s ease,background .16s ease;
+}
+.atlas-nav-reopen:hover,
+.atlas-nav-reopen:focus-visible{
+  max-width:150px;
+  background:#f1ece5;
+}
+.atlas-nav-reopen svg{width:15px;height:15px;min-width:15px}
+.atlas-nav-reopen span{font-size:11px;opacity:0;transition:opacity .12s ease}
+.atlas-nav-reopen:hover span,
+.atlas-nav-reopen:focus-visible span{opacity:1}
+
+.canvas-stage-wrap{
+  box-sizing:border-box;
+  max-width:100%;
+  overflow-x:auto;
+  overflow-y:visible;
+  scrollbar-gutter:stable;
+  overscroll-behavior-x:contain;
+}
+
+.true-canvas{
+  box-sizing:border-box;
+  max-width:none;
+}
+
+/* In view mode, let the stage own horizontal overflow so off-canvas content stays reachable. */
+.canvas-first:not(.is-editing) .true-canvas{
+  overflow:visible;
+}
+
+/* In edit mode, keep the actual design coordinate system intact and scroll it instead of clipping it. */
+.canvas-first.is-editing .canvas-stage-wrap{
+  overflow-x:auto;
+}
+.canvas-first.is-editing .true-canvas{
+  min-width:100%;
+}
+
+@media(max-width:850px){
+  .atlas-nav-reopen{left:72px;top:10px}
+  .canvas-stage-wrap{width:calc(100% - 12px);margin-left:6px;margin-right:6px}
+}
