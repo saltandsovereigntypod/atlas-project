@@ -254,14 +254,33 @@
   border-color:#e4dcd4!important;
 }
 
-/* Let narrow columns really be narrow visually. */
-.db-sheet th:not(.db-row-index):not(.db-actions-column),
+/* Keep body cells clipped for very narrow columns, but headers must stay visible so their popovers can escape the cell. */
 .db-sheet td:not(.db-row-index):not(.db-actions-column){
   overflow:hidden;
 }
 
+.db-sheet th.db-field-header,
+.db-sheet th.db-title-column,
+.db-sheet th.db-add-field-column{
+  overflow:visible!important;
+  position:relative;
+}
+
+.db-field-header{
+  z-index:2;
+}
+
+.db-field-header:has(.db-property-menu){
+  z-index:1200;
+}
+
+.db-property-menu{
+  z-index:1300!important;
+}
+
 .db-field-header-summary{
   min-width:0!important;
+  overflow:hidden!important;
 }
 
 .db-field-header-summary > span{
