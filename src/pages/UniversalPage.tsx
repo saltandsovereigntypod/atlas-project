@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { Layers, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Layers, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useAppContext } from '../App'
 import AtlasWidget from '../components/AtlasWidget'
 import DatabaseCanvasView from '../components/DatabaseCanvasView'
@@ -14,17 +14,38 @@ import type { Database as DatabaseType, Field, FieldType, Page, PageBlock, PageB
 type Kind = 'home' | 'page' | 'database' | 'record'
 type BlockPatch = Record<string, unknown>
 const DEFAULT_CANVAS_HEIGHT = 1100
+const EDIT_ACTIVE_KEY = 'atlas:editor-session:active'
+const EDIT_STACK_KEY = 'atlas:editor-session:stack'
+
+function readEditorStack(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(EDIT_STACK_KEY) || '[]')
+    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
+function writeEditorStack(stack: string[]) {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem(EDIT_STACK_KEY, JSON.stringify(stack.slice(-40)))
+}
 
 export default function UniversalPage({ kind }: { kind: Kind }) {
   const params = useParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const { workspace, user } = useAppContext()
+  const routeKey = `${location.pathname}${location.search}`
   const [page, setPage] = useState<Page | null>(null)
   const [blocks, setBlocks] = useState<PageBlock[]>([])
   const [databases, setDatabases] = useState<DatabaseType[]>([])
   const [database, setDatabase] = useState<DatabaseType | null>(null)
   const [record, setRecord] = useState<RecordRow | null>(null)
   const [fields, setFields] = useState<Field[]>([])
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(() => typeof window !== 'undefined' && sessionStorage.getItem(EDIT_ACTIVE_KEY) === '1')
+  const [editorStack, setEditorStack] = useState<string[]>(() => readEditorStack())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dataOpen, setDataOpen] = useState(false)
   const [error, setError] = useState('')
@@ -102,9 +123,51 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
   useEffect(() => () => document.body.classList.remove('atlas-editing'), [])
   useEffect(() => { document.body.classList.toggle('atlas-editing', editing); return () => document.body.classList.remove('atlas-editing') }, [editing])
+  useEffect(() => {
+    if (!editing) return
+    setEditorStack(current => {
+      const stack = current.length ? current : [routeKey]
+      if (stack[stack.length - 1] === routeKey) {
+        writeEditorStack(stack)
+        return stack
+      }
+      const next = [...stack, routeKey]
+      writeEditorStack(next)
+      return next
+    })
+  }, [editing, routeKey])
 
   const selected = useMemo(() => blocks.find(block => block.id === selectedId) || null, [blocks, selectedId])
   const canvasHeight = Math.max(600, Number(page?.settings?.canvasHeight || DEFAULT_CANVAS_HEIGHT))
+
+  const enterEditing = () => {
+    const stack = [routeKey]
+    sessionStorage.setItem(EDIT_ACTIVE_KEY, '1')
+    writeEditorStack(stack)
+    setEditorStack(stack)
+    setEditing(true)
+    setSelectedId(null)
+  }
+
+  const leaveEditing = () => {
+    sessionStorage.removeItem(EDIT_ACTIVE_KEY)
+    sessionStorage.removeItem(EDIT_STACK_KEY)
+    setEditorStack([])
+    setEditing(false)
+    setSelectedId(null)
+    setDataOpen(false)
+  }
+
+  const editorBack = () => {
+    if (editorStack.length < 2) return
+    const next = editorStack.slice(0, -1)
+    const previous = next[next.length - 1]
+    writeEditorStack(next)
+    setEditorStack(next)
+    setSelectedId(null)
+    setDataOpen(false)
+    navigate(previous)
+  }
 
   const savePagePatch = async (patch: Partial<Page>) => {
     if (!page) return
@@ -232,7 +295,10 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   return <div className={`atlas-page canvas-first ${editing ? 'is-editing' : ''}`} style={pageStyle}>
     <header className="canvas-topbar">
       <div className="canvas-breadcrumb">{kind === 'home' ? 'Dashboard' : kind === 'database' ? database?.name : kind === 'record' ? `${database?.name} / ${record?.title}` : page.title}</div>
-      <div className="canvas-topbar-actions"><button className={`canvas-toolbar-button ${editing ? 'done' : 'edit'}`} onClick={() => { setEditing(value => !value); setSelectedId(null) }}><Pencil />{editing ? 'Done' : 'Edit'}</button></div>
+      <div className="canvas-topbar-actions">
+        {editing && editorStack.length > 1 && <button className="canvas-toolbar-button editor-back" onClick={editorBack}><ArrowLeft />Back</button>}
+        <button className={`canvas-toolbar-button ${editing ? 'done' : 'edit'}`} onClick={editing ? leaveEditing : enterEditing}><Pencil />{editing ? 'Done' : 'Edit'}</button>
+      </div>
     </header>
 
     <main className="canvas-stage-wrap">
@@ -249,7 +315,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
       onAdd={addBlock} onAddPageTitle={addPageTitle} onAddPageCover={addPageCover}
       onSelectBlock={setSelectedId} onSaveBlock={saveBlockPatch} onDeleteBlock={deleteBlock} onDuplicateBlock={duplicateBlock}
       onSavePage={savePagePatch} onSavePageSettings={savePageSettings} onOpenData={() => setDataOpen(true)}
-      onDone={() => { setEditing(false); setSelectedId(null) }}
+      onDone={leaveEditing}
     />, host)}
 
     {dataOpen && <DataDrawer database={database} record={record} databases={databases} fields={fields} onClose={() => setDataOpen(false)} onRecordChange={setRecord} onFieldsChange={setFields} />}
@@ -265,7 +331,7 @@ function CanvasBlock({ block, page, editing, selected, databases, record, fields
   const commit = (patch: BlockPatch) => { const next = { ...config, ...patch }; setConfig(next); onSave(patch) }
 
   const drag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (!editing || locked || (event.target as HTMLElement).closest('button,input,textarea,select,a,.resize-handle,.db-canvas-view')) return
+    if (!editing || locked || (event.target as HTMLElement).closest('button,input,textarea,select,a,.resize-handle,.db-canvas-view,.db-view-next,.canvas-card-view,.canvas-card-records,.canvas-card-instance,.canvas-card-element')) return
     event.preventDefault()
     onSelect()
     const startX = event.clientX, startY = event.clientY, originX = Number(config.x || 0), originY = Number(config.y || 0), target = event.currentTarget
