@@ -10,7 +10,7 @@ type Mode='gallery'|'list'|'rail'|'board'|'table'|'canvas'
 
 export default function DatabaseCanvasViewNext(props:Props){
  const mode=String(props.config.mode||'gallery') as Mode
- return <div className={`db-view-next mode-${mode}`} onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
+ return <div className={`db-view-next mode-${mode}`} onPointerDown={e=>e.stopPropagation()}>
   {mode==='canvas'?<CanvasMode {...props}/>:<LegacyDatabaseCanvasView {...props}/>} 
  </div>
 }
