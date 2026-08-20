@@ -13,7 +13,7 @@ async function atlasFetch(input: RequestInfo | URL, init?: RequestInit) {
   const request = new Request(input, init)
   const response = await fetch(request.clone())
 
-  if (response.status !== 401 || !client || request.headers.get('x-atlas-auth-retry') === '1') return response
+  if (response.status !== 401 || !client) return response
 
   let body: { code?: string; message?: string } | null = null
   try {
@@ -35,8 +35,9 @@ async function atlasFetch(input: RequestInfo | URL, init?: RequestInit) {
 
   const headers = new Headers(request.headers)
   headers.set('authorization', `Bearer ${token}`)
-  headers.set('x-atlas-auth-retry', '1')
 
+  // This is the browser's native fetch, not the Supabase wrapper, so the retry
+  // cannot loop back through atlasFetch.
   return fetch(new Request(request, { headers }))
 }
 
