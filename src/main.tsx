@@ -26,6 +26,7 @@ import './template-connections.css'
 import './use-mode.css'
 import './live-view-v2.css'
 import './canvas-card-view.css'
+import './canvas-card-sidebar.css'
 
 installTemplateEnhancements()
 installTemplateLiveViews()
