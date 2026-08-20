@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Database } from 'lucide-react'
+import { Database, SlidersHorizontal } from 'lucide-react'
 import LegacyDatabaseCanvasView from './DatabaseCanvasViewLegacy'
 import CanvasCardView, { ensureCanvasCardTemplate } from './CanvasCardView'
 import { createRecord, getFields, getRecords, updateRecord } from '../lib/data'
@@ -7,10 +7,12 @@ import type { Database as DatabaseType, Field, RecordRow } from '../types'
 
 type Props={blockId:string;config:Record<string,unknown>;editing:boolean;databases:DatabaseType[];save:(patch:Record<string,unknown>)=>void}
 type Mode='gallery'|'list'|'rail'|'board'|'table'|'canvas'
+const MODES:Array<{id:Mode;label:string}>=[{id:'gallery',label:'Gallery'},{id:'list',label:'List'},{id:'rail',label:'Rail'},{id:'board',label:'Board'},{id:'table',label:'Table'},{id:'canvas',label:'Canvas Cards'}]
 
 export default function DatabaseCanvasViewNext(props:Props){
  const mode=String(props.config.mode||'gallery') as Mode
  return <div className={`db-view-next mode-${mode}`}>
+  {props.editing&&<div className="db-view-quick-switch"><SlidersHorizontal/><span>View</span><select aria-label="Database view type" value={mode} onChange={e=>props.save({mode:e.target.value,canvasCardSelectedElementId:'__card__'})}>{MODES.map(item=><option value={item.id} key={item.id}>{item.label}</option>)}</select></div>}
   {mode==='canvas'?<CanvasMode {...props}/>:<LegacyDatabaseCanvasView {...props}/>} 
  </div>
 }
@@ -29,7 +31,7 @@ function CanvasMode({config,editing,save}:Props){
  const patchRecord=async(record:RecordRow,fieldId:string,value:unknown)=>{const next=await updateRecord(record.id,{data:{...record.data,[fieldId]:value}});setRecords(items=>items.map(item=>item.id===next.id?next:item))}
  const createHere=async()=>{if(!databaseId||creating)return;setCreating(true);try{await createRecord(databaseId,'Untitled');await reload()}finally{setCreating(false)}}
  return <div className="db-canvas-mode">
-  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Select this view and choose a collection from the editor sidebar.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing={Boolean(config.inlineEditing)} onPatchField={patchRecord} showCreate={config.allowCreate!==false} onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})}/>} 
+  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Select this view, then choose its source under Selected.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing={Boolean(config.inlineEditing)} onPatchField={patchRecord} showCreate={config.allowCreate!==false} onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})}/>} 
  </div>
 }
 
