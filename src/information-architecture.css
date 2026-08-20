@@ -1,0 +1,45 @@
+.atlas-edit-tabs-five{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:3px}
+.atlas-edit-tabs-five button{min-width:0;padding-left:4px;padding-right:4px}
+.atlas-edit-tabs-five button svg{width:13px;height:13px}
+
+/* The old live-view builder duplicated the Selected sidebar. Keep only the compact layout controls. */
+.db-live-surface.editing .db-inline-data-setup{display:none!important}
+.db-live-surface.editing .db-canvas-controls button:last-child{display:none!important}
+.db-live-surface.editing .db-canvas-header{min-height:34px}
+
+.db-view-next{position:relative}
+.db-view-quick-switch{position:absolute;z-index:90;right:8px;top:7px;display:flex;align-items:center;gap:5px;min-height:31px;padding:3px 5px 3px 8px;border:1px solid #d8cec2;border-radius:9px;background:rgba(251,249,245,.96);box-shadow:0 5px 16px rgba(42,35,29,.08);color:#655b52;font-size:9px;font-weight:700}
+.db-view-quick-switch svg{width:12px;height:12px}
+.db-view-quick-switch select{height:24px;max-width:125px;border:0;background:transparent;padding:0 4px;font:inherit;font-weight:700;color:#2d2823;outline:0;cursor:pointer}
+.mode-canvas .db-view-quick-switch{top:4px}
+.mode-canvas .canvas-card-view{padding-top:38px}
+
+/* Library is for visual starting points. Database creation/editing stays in main Data. */
+.atlas-creative-mode-tabs{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.atlas-creative-mode-tabs button:nth-child(4){display:none!important}
+.atlas-template-intro{margin-bottom:8px}
+.atlas-template-categories{display:flex!important;flex-wrap:wrap;overflow:visible!important;gap:5px;padding-bottom:0!important}
+.atlas-template-categories button{flex:0 0 auto}
+.atlas-template-list,.atlas-section-library,.atlas-style-library{gap:8px}
+.atlas-template-card,.atlas-style-card{grid-template-columns:48px minmax(0,1fr)!important;gap:8px!important;padding:8px!important;overflow:hidden}
+.atlas-template-preview{width:48px!important;height:48px!important}
+.atlas-template-copy p,.atlas-style-card p{overflow-wrap:anywhere}
+.atlas-template-actions{grid-template-columns:1fr!important}
+.atlas-template-actions button{width:100%}
+.atlas-style-card>button{width:100%}
+.atlas-section-card{overflow:hidden}
+.atlas-section-card p{overflow-wrap:anywhere}
+
+/* Make visual meaning clearer and reduce nested-app feeling. */
+.atlas-canvas-card-sidebar{display:grid;gap:2px}
+.atlas-canvas-sidebar-section{padding-top:4px}
+.atlas-canvas-sidebar-section+.atlas-canvas-sidebar-section{border-top:1px solid #ebe4db;margin-top:8px;padding-top:10px}
+.atlas-canvas-sidebar-section .atlas-edit-section-title{margin-top:0}
+.atlas-card-add-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.atlas-card-add-row label,.atlas-card-add-row button{min-width:0}
+.atlas-card-add-row label{grid-column:1/-1}
+
+@media(max-width:900px){
+ .atlas-edit-tabs-five{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+ .db-view-quick-switch{right:5px;top:5px}
+}
