@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Database, SlidersHorizontal } from 'lucide-react'
+import { Database } from 'lucide-react'
 import LegacyDatabaseCanvasView from './DatabaseCanvasViewLegacy'
-import CanvasCardView, { ensureCanvasCardTemplate } from './CanvasCardView'
+import CanvasCardView, { ensureCanvasCardTemplate, type CanvasCardRecordLayout } from './CanvasCardView'
 import { createRecord, getFields, getRecords, updateRecord } from '../lib/data'
 import type { Database as DatabaseType, Field, RecordRow } from '../types'
 
 type Props={blockId:string;config:Record<string,unknown>;editing:boolean;databases:DatabaseType[];save:(patch:Record<string,unknown>)=>void}
 type Mode='gallery'|'list'|'rail'|'board'|'table'|'canvas'
-const MODES:Array<{id:Mode;label:string}>=[{id:'gallery',label:'Gallery'},{id:'list',label:'List'},{id:'rail',label:'Rail'},{id:'board',label:'Board'},{id:'table',label:'Table'},{id:'canvas',label:'Canvas Cards'}]
 
 export default function DatabaseCanvasViewNext(props:Props){
  const mode=String(props.config.mode||'gallery') as Mode
- return <div className={`db-view-next mode-${mode}`}>
-  {props.editing&&<div className="db-view-quick-switch"><SlidersHorizontal/><span>View</span><select aria-label="Database view type" value={mode} onChange={e=>props.save({mode:e.target.value,canvasCardSelectedElementId:'__card__'})}>{MODES.map(item=><option value={item.id} key={item.id}>{item.label}</option>)}</select></div>}
+ return <div className={`db-view-next mode-${mode}`} onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
   {mode==='canvas'?<CanvasMode {...props}/>:<LegacyDatabaseCanvasView {...props}/>} 
  </div>
 }
@@ -28,10 +26,12 @@ function CanvasMode({config,editing,save}:Props){
  const usableFields=fields.filter(field=>field.name.trim().toLowerCase()!=='name')
  const shown=useMemo(()=>{let next=[...records];const filter=usableFields.find(field=>field.id===filterFieldId);if(filter&&filterValue.trim())next=next.filter(record=>match(record.data?.[filter.id],filter.type,filterValue));const sort=usableFields.find(field=>field.id===sortFieldId);if(sort)next.sort((a,b)=>compare(a.data?.[sort.id],b.data?.[sort.id],sort.type)*(sortDirection==='desc'?-1:1));return next.slice(0,Number(config.limit||24))},[records,usableFields,filterFieldId,filterValue,sortFieldId,sortDirection,config.limit])
  const template=ensureCanvasCardTemplate(config.canvasCardTemplate,usableFields)
+ const layouts=(config.canvasCardRecordLayouts&&typeof config.canvasCardRecordLayouts==='object'?config.canvasCardRecordLayouts:{}) as Record<string,CanvasCardRecordLayout>
  const patchRecord=async(record:RecordRow,fieldId:string,value:unknown)=>{const next=await updateRecord(record.id,{data:{...record.data,[fieldId]:value}});setRecords(items=>items.map(item=>item.id===next.id?next:item))}
  const createHere=async()=>{if(!databaseId||creating)return;setCreating(true);try{await createRecord(databaseId,'Untitled');await reload()}finally{setCreating(false)}}
+ const saveLayout=(recordId:string,next:CanvasCardRecordLayout)=>save({canvasCardRecordLayouts:{...layouts,[recordId]:next},canvasCardSelectedRecordId:recordId})
  return <div className="db-canvas-mode">
-  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Select this view, then choose its source under Selected.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing={Boolean(config.inlineEditing)} onPatchField={patchRecord} showCreate={config.allowCreate!==false} onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})}/>} 
+  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Select this view and choose a collection from the editor sidebar.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing={Boolean(config.inlineEditing)} onPatchField={patchRecord} showCreate={config.allowCreate!==false} onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})} recordLayouts={layouts} onChangeRecordLayout={saveLayout} selectedRecordId={String(config.canvasCardSelectedRecordId||'')} onSelectRecord={id=>save({canvasCardSelectedRecordId:id})}/>} 
  </div>
 }
 
