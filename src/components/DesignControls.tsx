@@ -12,7 +12,14 @@ const COMMON_FONTS=[
 ]
 
 export function ColorRoleStrip({roles,onChange}:{roles:ColorRole[];onChange:(key:string,value:string)=>void}){
- return <div className="atlas-color-role-strip">{roles.map(role=><DesignColorPicker key={role.key} label={role.label} value={role.value} fallback={role.fallback} allowGradient={role.allowGradient} onChange={value=>onChange(role.key,value)}/>)}</div>
+ const isWidget=roles.some(role=>role.label==='Button')&&roles.some(role=>role.label==='Input')
+ const widgetRoles:ColorRole[]=isWidget?[
+  {key:'accentColor',label:'Checkbox fill',value:currentWidgetVar('--widget-accent'),fallback:'#ffffff'},
+  {key:'secondaryColor',label:'Checkbox border',value:currentWidgetVar('--widget-secondary'),fallback:'#8a8178'},
+  {key:'mutedColor',label:'Checkmark',value:currentWidgetVar('--widget-muted'),fallback:'#211e1a'},
+ ]:[]
+ const merged=[...roles,...widgetRoles.filter(extra=>!roles.some(role=>role.key===extra.key))]
+ return <div className="atlas-color-role-strip">{merged.map(role=><DesignColorPicker key={role.key} label={role.label} value={role.value} fallback={role.fallback} allowGradient={role.allowGradient} onChange={value=>onChange(role.key,value)}/>)}</div>
 }
 
 export function DesignColorPicker({label,value,fallback,allowGradient=false,onChange}:ColorPickerProps){
@@ -68,6 +75,7 @@ function safeHexFallback(value:string){return /^#[0-9a-f]{6}$/i.test(value)?valu
 function isGradient(value:string){return /gradient\(/i.test(value)}
 function parseGradient(value:string):{type:'linear'|'radial';from:string;to:string;angle:number}|null{const colors=value.match(/#[0-9a-f]{6}/ig);if(!colors||colors.length<2)return null;return{type:/radial-gradient/i.test(value)?'radial':'linear',from:colors[0],to:colors[1],angle:Number(value.match(/(-?\d+(?:\.\d+)?)deg/i)?.[1]||90)}}
 function fontLabel(value:string){return value.split(',')[0].replace(/["']/g,'')}
+function currentWidgetVar(name:string){if(typeof document==='undefined')return'';const shell=document.querySelector<HTMLElement>('.canvas-element.type-widget.selected .atlas-widget-shell');return shell?getComputedStyle(shell).getPropertyValue(name).trim():''}
 function collectPageColors(){
  if(typeof document==='undefined')return[]
  const colors:string[]=[]
