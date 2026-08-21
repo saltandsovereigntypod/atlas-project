@@ -15,6 +15,7 @@ type PendingTemplate = { templateId:string; applyMode:'replace'|'add'; requireme
 type PendingReplace = { templateId:string; resolved:Record<string,string> }
 
 const categories: Array<'All' | TemplateCategory> = ['All', 'Witchy', 'Books', 'Budget', 'Podcast', 'Travel', 'Boards']
+const DASHBOARD_TEMPLATE_IDS = new Set(['witchy-dashboard','budget-dashboard','book-library','podcast-hq'])
 const SOURCE_PRESETS: SourcePreset[] = [
   { id:'blank', name:'Blank collection', icon:'✦', description:'Start simple and add only what you need.', fields:[] },
   { id:'books', name:'Books & reading', icon:'📚', description:'A flexible library for books, TBRs, ratings, covers, and reading status.', fields:[{name:'Author',type:'text'},{name:'Status',type:'status'},{name:'Rating',type:'number'},{name:'Genre',type:'multi_select'},{name:'Cover',type:'image'},{name:'Started',type:'date'},{name:'Finished',type:'date'},{name:'Notes',type:'long_text'}] },
@@ -48,7 +49,9 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
 
   const databaseId = preferredDb || database?.id || databases[0]?.id || ''
   const selectedDatabase = databases.find(item => item.id === databaseId) || database || null
-  const templateItems = useMemo(() => PAGE_TEMPLATES.filter(t => (category === 'All' || t.category === category) && (!query.trim() || `${t.name} ${t.description} ${t.category}`.toLowerCase().includes(query.toLowerCase()))), [category, query])
+  const matchesTemplateSearch=(t:(typeof PAGE_TEMPLATES)[number])=>!query.trim() || `${t.name} ${t.description} ${t.category}`.toLowerCase().includes(query.toLowerCase())
+  const dashboardItems = useMemo(() => PAGE_TEMPLATES.filter(t => DASHBOARD_TEMPLATE_IDS.has(t.id) && matchesTemplateSearch(t)), [query])
+  const templateItems = useMemo(() => PAGE_TEMPLATES.filter(t => !DASHBOARD_TEMPLATE_IDS.has(t.id) && (category === 'All' || t.category === category) && matchesTemplateSearch(t)), [category, query])
   const sectionItems = useMemo(() => SECTION_PRESETS.filter(item => !query.trim() || `${item.name} ${item.description} ${item.category}`.toLowerCase().includes(query.toLowerCase())), [query])
   const styleItems = useMemo(() => STYLE_PACKS.filter(item => !query.trim() || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [query])
   const kitItems = useMemo(() => DATA_KITS.filter(item => !query.trim() || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [query])
@@ -195,6 +198,7 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
   }
 
   const replaceTemplate=pendingReplace?PAGE_TEMPLATES.find(template=>template.id===pendingReplace.templateId):null
+  const renderTemplateCard=(template:(typeof PAGE_TEMPLATES)[number],dashboard=false)=>{const reqs=getTemplateRequirements(template);return <article key={template.id} className={`atlas-template-card ${dashboard?'atlas-dashboard-template-card':''}`}><div className="atlas-template-preview"><span>{template.icon}</span><small>{dashboard?'Dashboard':template.category}</small></div><div className="atlas-template-copy"><strong>{template.name}</strong><p>{template.description}</p>{reqs.length>0&&<span className="atlas-template-system-badge"><Link2/>{reqs.length} data connection{reqs.length===1?'':'s'} to review</span>}</div><div className="atlas-template-actions"><button disabled={Boolean(busy)} onClick={()=>startTemplate(template.id,'replace')}><WandSparkles/>Use template</button><button disabled={Boolean(busy)} onClick={()=>startTemplate(template.id,'add')}><Plus/>Add to page</button></div></article>}
 
   return <div className="atlas-template-panel">
     {pendingReplace&&replaceTemplate&&<div className="atlas-confirm-backdrop" data-workspace-interactive onPointerDown={event=>event.stopPropagation()}>
@@ -215,7 +219,7 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
       <div className="atlas-connection-foot"><button onClick={()=>setPendingTemplate(null)}>Cancel</button><button className="primary" disabled={Boolean(busy)} onClick={()=>void confirmTemplateConnections()}>{busy?.startsWith('connections:')?'Connecting…':'Apply template'}</button></div>
     </div>}
 
-    {mode==='templates'&&<><div className="atlas-template-categories">{categories.map(c=><button key={c} className={category===c?'active':''} onClick={()=>setCategory(c)}>{c}</button>)}</div><div className="atlas-template-list">{templateItems.map(template=>{const reqs=getTemplateRequirements(template);return <article key={template.id} className="atlas-template-card"><div className="atlas-template-preview"><span>{template.icon}</span><small>{template.category}</small></div><div className="atlas-template-copy"><strong>{template.name}</strong><p>{template.description}</p>{reqs.length>0&&<span className="atlas-template-system-badge"><Link2/>{reqs.length} data connection{reqs.length===1?'':'s'} to review</span>}</div><div className="atlas-template-actions"><button disabled={Boolean(busy)} onClick={()=>startTemplate(template.id,'replace')}><WandSparkles/>Use template</button><button disabled={Boolean(busy)} onClick={()=>startTemplate(template.id,'add')}><Plus/>Add to page</button></div></article>})}</div></>}
+    {mode==='templates'&&<>{page.context_type==='home'&&dashboardItems.length>0&&<section className="atlas-dashboard-template-section"><div className="atlas-kit-heading"><Sparkles/><div><strong>Dashboard templates</strong><span>Complete starting layouts designed specifically for your main Atlas dashboard.</span></div></div><div className="atlas-template-list">{dashboardItems.map(template=>renderTemplateCard(template,true))}</div></section>}<div className="atlas-kit-heading"><LayoutTemplate/><div><strong>Page templates</strong><span>Complete layouts for focused pages and workspaces.</span></div></div><div className="atlas-template-categories">{categories.map(c=><button key={c} className={category===c?'active':''} onClick={()=>setCategory(c)}>{c}</button>)}</div><div className="atlas-template-list">{templateItems.map(template=>renderTemplateCard(template))}</div></>}
 
     {mode==='sections'&&<><DataBindingBar databases={databases} value={databaseId} onChange={setPreferredDb}/><div className="atlas-section-library">{sectionItems.map(section=><article key={section.id} className="atlas-section-card"><div className="atlas-section-card-head"><span>{section.icon}</span><div><strong>{section.name}</strong><small>{section.category}</small></div></div><p>{section.description}</p><button disabled={Boolean(busy)} onClick={()=>void addSection(section.id)}><Plus/>{busy===`section:${section.id}`?'Adding…':'Add section'}</button></article>)}</div></>}
 
