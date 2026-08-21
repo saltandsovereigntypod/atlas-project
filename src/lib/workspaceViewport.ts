@@ -12,6 +12,35 @@ export const screenToWorld=(point:ScreenPoint,viewport:WorkspaceViewportState,or
 export function zoomAt(viewport:WorkspaceViewportState,nextZoom:number,pointer:ScreenPoint,origin:ScreenPoint={x:0,y:0}):WorkspaceViewportState{const zoom=clampZoom(nextZoom),world=screenToWorld(pointer,viewport,origin);return{zoom,panX:pointer.x-origin.x-world.x*zoom,panY:pointer.y-origin.y-world.y*zoom}}
 export function fitRect(rect:WorldRect,viewportSize:{width:number;height:number},padding=64):WorkspaceViewportState{const zoom=clampZoom(Math.min((viewportSize.width-padding*2)/Math.max(1,rect.width),(viewportSize.height-padding*2)/Math.max(1,rect.height)));return{zoom,panX:padding-rect.x*zoom,panY:padding-rect.y*zoom}}
 
+/**
+ * Mouse-wheel and trackpad navigation is intentionally bounded to meaningful
+ * content. Direct canvas dragging remains free and does not use this helper.
+ * If a user has manually panned beyond the content bounds, wheel input may move
+ * back toward the content but will not push the viewport farther into empty space.
+ */
+export function panViewportByWheel(viewport:WorkspaceViewportState,delta:{x:number;y:number},content:WorldRect,viewportSize:{width:number;height:number},margin=120):WorkspaceViewportState{
+ const x=boundedWheelAxis(viewport.panX,delta.x,content.x,content.x+content.width,viewport.zoom,viewportSize.width,margin)
+ const y=boundedWheelAxis(viewport.panY,delta.y,content.y,content.y+content.height,viewport.zoom,viewportSize.height,margin)
+ return {...viewport,panX:x,panY:y}
+}
+
+function boundedWheelAxis(current:number,wheelDelta:number,worldStart:number,worldEnd:number,zoom:number,viewportLength:number,margin:number){
+ const startAligned=margin-worldStart*zoom
+ const endAligned=viewportLength-margin-worldEnd*zoom
+ const min=Math.min(startAligned,endAligned)
+ const max=Math.max(startAligned,endAligned)
+ const target=current-wheelDelta
+ if(current<min){
+  if(target<=current)return current
+  return Math.min(target,max)
+ }
+ if(current>max){
+  if(target>=current)return current
+  return Math.max(target,min)
+ }
+ return Math.max(min,Math.min(max,target))
+}
+
 type Transaction={event:ReactPointerEvent<HTMLElement>;zoom:number;threshold?:number;onStart?:()=>void;onMove:(dx:number,dy:number)=>void;onCommit:()=>void}
 export function beginWorkspacePointerTransaction({event,zoom,threshold=5,onStart,onMove,onCommit}:Transaction){
  const target=event.currentTarget,startX=event.clientX,startY=event.clientY;let active=false
