@@ -36,3 +36,46 @@
   color: var(--atlas-divider-color, currentColor) !important;
   stroke: var(--atlas-divider-color, currentColor) !important;
 }
+
+/* Native browser checkboxes are replaced with a deliberately simple Atlas
+   checkbox so fill, border, and checkmark can each be themed independently. */
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"] {
+  -webkit-appearance:none;
+  appearance:none;
+  width:16px;
+  height:16px;
+  min-width:16px;
+  margin:0;
+  display:inline-grid;
+  place-content:center;
+  border:1.5px solid var(--widget-secondary, #8a8178) !important;
+  border-radius:3px;
+  background:#ffffff;
+  cursor:pointer;
+  transition:background .12s,border-color .12s,box-shadow .12s;
+}
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"]::before {
+  content:"";
+  width:8px;
+  height:5px;
+  border-left:2px solid var(--widget-muted, #211e1a);
+  border-bottom:2px solid var(--widget-muted, #211e1a);
+  transform:rotate(-45deg) scale(0);
+  transform-origin:center;
+  transition:transform .1s ease-out;
+}
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"]:checked {
+  background:var(--widget-accent, #ffffff) !important;
+  border-color:var(--widget-secondary, #8a8178) !important;
+}
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"]:checked::before {
+  transform:rotate(-45deg) scale(1);
+}
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"]:focus-visible {
+  outline:2px solid color-mix(in srgb,var(--widget-accent,#665477) 45%,transparent);
+  outline-offset:2px;
+}
+.canvas-element.type-widget .atlas-widget-shell input[type="checkbox"]:disabled {
+  opacity:.45;
+  cursor:not-allowed;
+}
