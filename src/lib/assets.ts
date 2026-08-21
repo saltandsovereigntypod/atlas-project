@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export type AssetKind = 'image' | 'font' | 'emoji' | 'file'
+export type AssetKind = 'image' | 'audio' | 'font' | 'emoji' | 'file'
 
 export type AtlasAsset = {
   id: string
@@ -25,7 +25,7 @@ export async function getAssets(workspaceId: string, kind?: AssetKind): Promise<
   return (data || []) as AtlasAsset[]
 }
 
-export async function uploadAsset(workspaceId: string, userId: string, file: File, kind: 'image' | 'font' | 'file'): Promise<AtlasAsset> {
+export async function uploadAsset(workspaceId: string, userId: string, file: File, kind: 'image' | 'audio' | 'font' | 'file'): Promise<AtlasAsset> {
   const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin'
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || `asset.${extension}`
   const path = `${userId}/${workspaceId}/${crypto.randomUUID()}-${safeName}`
@@ -48,7 +48,7 @@ export async function uploadAsset(workspaceId: string, userId: string, file: Fil
     storage_path: path,
     public_url: publicUrl,
     mime_type: file.type || null,
-    metadata: kind === 'font' ? { family: file.name.replace(/\.[^.]+$/, '') } : {},
+    metadata: { ...(kind === 'font' ? { family: file.name.replace(/\.[^.]+$/, '') } : {}), size: file.size },
   }).select('*').single()
 
   if (error) {
@@ -78,6 +78,12 @@ export async function deleteAsset(asset: AtlasAsset): Promise<void> {
   }
   const { error } = await supabase.from('assets').delete().eq('id', asset.id)
   if (error) throw error
+}
+
+export async function getAssetUsageCount(assetId: string): Promise<number> {
+  const { count, error } = await supabase.from('page_blocks').select('id', { count: 'exact', head: true }).eq('config->>assetId', assetId)
+  if (error) throw error
+  return count || 0
 }
 
 export async function loadFontAsset(asset: AtlasAsset): Promise<string> {

@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App'
-import { installDirectCanvasEditing } from './lib/directCanvasEditing'
 import { installTemplateEnhancements } from './lib/templateEnhancements'
 import { installTemplateLiveViews } from './lib/templateLiveViews'
 import './styles.css'
@@ -32,7 +31,6 @@ import './editor-clarity.css'
 
 installTemplateEnhancements()
 installTemplateLiveViews()
-installDirectCanvasEditing()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>,
