@@ -9,6 +9,7 @@ import UniversalPage from './pages/UniversalPage'
 import DatabaseWorkspace from './pages/DatabaseWorkspace'
 import DatabaseCanvasPage from './pages/DatabaseCanvasPage'
 import AtlasShell from './components/AtlasShell'
+import './workspace-content.css'
 
 interface AppContextValue { user:User; workspace:Workspace; refreshWorkspace:()=>Promise<void> }
 const AppContext=createContext<AppContextValue|null>(null)
