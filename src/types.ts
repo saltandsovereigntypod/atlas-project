@@ -1,8 +1,8 @@
 export type FieldType = 'text' | 'long_text' | 'number' | 'date' | 'checkbox' | 'select' | 'multi_select' | 'status' | 'url' | 'email' | 'phone' | 'image' | 'files' | 'relation' | 'created_time' | 'last_edited_time'
-export type ViewType = 'table' | 'gallery' | 'board'
+export type ViewType = 'table' | 'gallery' | 'board' | 'canvas'
 export type LayoutSurface = 'record' | 'gallery' | 'board'
 export type PageContextType = 'home' | 'page' | 'database' | 'record'
-export type PageBlockType = 'heading' | 'text' | 'document' | 'image' | 'audio' | 'file' | 'database_view' | 'divider' | 'callout' | 'property' | 'button' | 'metric' | 'progress' | 'section' | 'widget'
+export type PageBlockType = 'heading' | 'text' | 'document' | 'image' | 'audio' | 'file' | 'database_view' | 'divider' | 'callout' | 'property' | 'button' | 'metric' | 'progress' | 'section' | 'shape' | 'widget'
 export type AutomationTriggerType = 'record_created' | 'field_changed'
 export type AutomationActionType = 'set_field' | 'set_today' | 'set_checkbox'
 
