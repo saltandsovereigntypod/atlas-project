@@ -34,6 +34,7 @@ import './workspace-overlays.css'
 import './design-controls.css'
 import './widget-surface-fix.css'
 import './design-popover-position.css'
+import './atlas-builder-refresh.css'
 
 installTemplateEnhancements()
 installDashboardTemplateEnhancements()
