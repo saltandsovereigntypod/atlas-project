@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowLeft, Lock, Maximize, Minus, Plus, Trash2, Unlock, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -105,6 +105,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   useEffect(() => { void load() }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
   useEffect(()=>{if(!page)return;try{const saved=sessionStorage.getItem(`atlas:viewport:${page.id}`);setViewport(saved?JSON.parse(saved):{zoom:1,panX:40,panY:40})}catch{setViewport({zoom:1,panX:40,panY:40})}},[page?.id])
   useEffect(()=>{if(!page)return;try{sessionStorage.setItem(`atlas:viewport:${page.id}`,JSON.stringify(viewport))}catch{}},[page?.id,viewport])
+  useEffect(()=>{const node=viewportRef.current;if(!node||!page)return;const wheel=(event:WheelEvent)=>{event.preventDefault();const rect=node.getBoundingClientRect();if(event.ctrlKey||event.metaKey){setViewport(current=>zoomAt(current,current.zoom*Math.exp(-event.deltaY*.002),{x:event.clientX,y:event.clientY},{x:rect.left,y:rect.top}));return}setViewport(current=>({...current,panX:current.panX-event.deltaX,panY:current.panY-event.deltaY}))};node.addEventListener('wheel',wheel,{passive:false});return()=>node.removeEventListener('wheel',wheel)},[page?.id])
   useEffect(()=>{const down=(event:KeyboardEvent)=>{if(event.code==='Space'&&!isTypingTarget(event.target))spacePressed.current=true},up=(event:KeyboardEvent)=>{if(event.code==='Space')spacePressed.current=false};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[])
   const selected = useMemo(() => selection && (selection.kind === 'page_block' || selection.kind === 'database_view') ? blocks.find(block => block.id === selection.id) || null : null, [blocks, selection])
   const canvasHeight = Math.max(600, Number(page?.settings?.canvasHeight || DEFAULT_CANVAS_HEIGHT))
@@ -238,7 +239,6 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   }
 
   const changeZoom=(next:number,pointer?:{x:number;y:number})=>{const rect=viewportRef.current?.getBoundingClientRect();if(!rect)return;const focus=pointer||{x:rect.left+rect.width/2,y:rect.top+rect.height/2};setViewport(current=>zoomAt(current,next,focus,{x:rect.left,y:rect.top}))}
-  const onViewportWheel=(event:ReactWheelEvent<HTMLDivElement>)=>{if(event.ctrlKey||event.metaKey){event.preventDefault();changeZoom(viewport.zoom*Math.exp(-event.deltaY*.002),{x:event.clientX,y:event.clientY});return}event.preventDefault();setViewport(current=>({...current,panX:current.panX-event.deltaX,panY:current.panY-event.deltaY}))}
   const panViewport=(event:ReactPointerEvent<HTMLDivElement>)=>{if(event.button!==1&&!spacePressed.current)return;event.preventDefault();const origin=viewport;beginWorkspacePointerTransaction({event,zoom:1,threshold:0,onMove:(dx,dy)=>setViewport({...origin,panX:origin.panX+dx,panY:origin.panY+dy}),onCommit:()=>{}})}
   const fitWorkspace=()=>{const node=viewportRef.current;if(node)setViewport(fitRect(contentBounds,{width:node.clientWidth,height:node.clientHeight}))}
   const fitSelection=()=>{const block=selected,node=viewportRef.current;if(!block||!node)return;setViewport(fitRect(blockRect(block),{width:node.clientWidth,height:node.clientHeight},100))}
@@ -266,7 +266,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
       </div>
     </header>
 
-    <main ref={viewportRef} className="workspace-viewport" onWheel={onViewportWheel} onPointerDown={panViewport}>
+    <main ref={viewportRef} className="workspace-viewport" onPointerDown={panViewport}>
       <div className="workspace-world" style={{width:contentBounds.width,height:contentBounds.height,transform:`translate(${viewport.panX}px,${viewport.panY}px) scale(${viewport.zoom})`}}>
        <div className="true-canvas" style={{ width:contentBounds.width,height:contentBounds.height }} onPointerDown={event => { if (event.currentTarget === event.target) setSelection({kind:'page',id:page.id}) }}>
         {blocks.map(block => <CanvasBlock key={block.id} block={block} page={page} zoom={viewport.zoom} pageLocked={layoutLocked} selected={selection?.id === block.id} databases={databases} record={record} fields={fields} onRecordChange={setRecord} onOpenDocument={setOpenDocumentId} onSelect={() => setSelection({kind:block.type === 'database_view'?'database_view':'page_block',id:block.id})} onSave={patch => saveBlockPatch(block.id, patch)} onDelete={() => deleteBlock(block.id)} />)}
@@ -298,6 +298,7 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   const locked = Boolean(config.locked)
   const hidden = Boolean(config.hidden)
   const commit = (patch: BlockPatch) => { const next = { ...config, ...patch }; setConfig(next); onSave(patch) }
+  const bodyDraggable=['image','divider','metric','progress','section'].includes(block.type)
 
   const drag = (event: ReactPointerEvent<HTMLElement>) => {if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin={x:Number(config.x||0),y:Number(config.y||0)};beginWorkspacePointerTransaction({event,zoom,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,x:Math.max(0,origin.x+dx),y:Math.max(0,origin.y+dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y});return current})})}
   const resize = (edge:ResizeEdge)=>(event:ReactPointerEvent<HTMLElement>)=>{if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin=blockRect({...block,config});beginWorkspacePointerTransaction({event,zoom,threshold:0,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,...resizeRect(origin,edge,dx,dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y,width:current.width,height:current.height});return current})})}
@@ -314,8 +315,8 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
     opacity: hidden ? 0.3 : 1,
   }
 
-  return <div className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(event.target===event.currentTarget){onSelect();drag(event)}}}>
-    {selected&&!locked&&!pageLocked&&<><button className="object-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>{(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
+  return <div className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{const target=event.target as HTMLElement;if(event.target===event.currentTarget||(bodyDraggable&&!isInteractiveCanvasTarget(target))){onSelect();drag(event)}}}>
+    {!locked&&!pageLocked&&<><button className="object-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onClick={event=>{event.stopPropagation();onSelect()}} onPointerDown={drag}/>{(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
     <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
 }
@@ -413,3 +414,4 @@ function DataDrawer({ database, record, databases, fields, onClose, onRecordChan
 const fieldTypes: FieldType[] = ['text', 'long_text', 'number', 'date', 'checkbox', 'select', 'multi_select', 'url', 'image', 'relation']
 function blockRect(block:PageBlock):WorldRect{return{x:Number(block.config.x||0),y:Number(block.config.y||0),width:Number(block.config.width||320),height:Number(block.config.height||140)}}
 function isTypingTarget(target:EventTarget|null){const element=target as HTMLElement|null;return Boolean(element?.isContentEditable||element?.matches('input,textarea,select'))}
+function isInteractiveCanvasTarget(target:HTMLElement|null){return Boolean(target?.closest('input,textarea,select,button,a,audio,video,[contenteditable="true"]'))}
