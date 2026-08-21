@@ -1,0 +1,11 @@
+/* Widgets use the selected canvas rectangle only for placement and selection.
+   The visible fill belongs to the widget surface itself, not the outer block frame. */
+.canvas-element.type-widget {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.canvas-element.type-widget > .atlas-widget-shell {
+  border-radius: inherit !important;
+}
