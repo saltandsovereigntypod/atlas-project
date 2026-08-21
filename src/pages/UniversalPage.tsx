@@ -250,7 +250,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
 
   const overlayHost = typeof document !== 'undefined' ? document.body : null
   const pageStyle: CSSProperties = {
-    backgroundColor: String(page.settings?.background || '#fbfaf7'),
+    background: String(page.settings?.background || '#fbfaf7'),
     color: String(page.settings?.textColor || '#211e1a'),
     backgroundImage: page.settings?.backgroundImage ? `url(${String(page.settings.backgroundImage)})` : undefined,
     backgroundSize: String(page.settings?.backgroundSize || 'cover'),
@@ -311,14 +311,25 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   if (hidden) return null
 
   const rotation = Number(config.rotation || 0)
-  const style: CSSProperties = {
+  const borderColor=String(config.borderColor||config.border||'transparent')
+  const borderWidth=Number(config.borderWidth??(config.border?1:0))
+  const style = {
     left: Number(config.x || 0), top: Number(config.y || 0), width: Number(config.width || 320), height: Number(config.height || 140),
     zIndex: Number(config.zIndex || 1), transform: rotation ? `rotate(${rotation}deg)` : undefined,
     background: String(config.background || 'transparent'), color: String(config.textColor || 'inherit'),
     borderRadius: Number(config.radius || 0), padding: Number(config.padding || 0),
-    border: config.border ? `1px solid ${String(config.border)}` : undefined,
-    opacity: hidden ? 0.3 : 1,
-  }
+    border: borderWidth ? `${borderWidth}px ${String(config.borderStyle||'solid')} ${borderColor}` : undefined,
+    opacity: Number(config.opacity??1), fontFamily:String(config.fontFamily||'inherit'),
+    '--atlas-object-font':String(config.fontFamily||'inherit'),
+    '--atlas-input-background':String(config.inputBackground||'#ffffff'),
+    '--atlas-input-text':String(config.inputTextColor||config.textColor||'inherit'),
+    '--atlas-input-border':String(config.inputBorderColor||borderColor||'#d8d0c7'),
+    '--atlas-label-color':String(config.labelColor||config.textColor||'currentColor'),
+    '--atlas-muted-color':String(config.mutedColor||config.textColor||'currentColor'),
+    '--atlas-track-color':String(config.trackColor||'#e6dfd7'),
+    '--atlas-fill-color':String(config.fillColor||config.textColor||'#2e2925'),
+    '--atlas-divider-color':String(config.dividerColor||config.background||config.textColor||'#2e2925'),
+  } as CSSProperties
 
   return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(pointerOwner(event.nativeEvent)==='object'){onSelect();drag(event)}}}>
     {selected&&!locked&&!pageLocked&&<>{['database_view','button','heading','text'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
