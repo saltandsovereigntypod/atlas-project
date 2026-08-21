@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react'
-import { Database as DatabaseIcon, Layers3, LayoutTemplate, Link2, Palette, Plus, Search, Sparkles, WandSparkles, X } from 'lucide-react'
+import { AlertTriangle, Database as DatabaseIcon, Layers3, LayoutTemplate, Link2, Palette, Plus, Search, Sparkles, WandSparkles, X } from 'lucide-react'
 import { createDatabase, createField, createPageBlock, deleteDatabase, deletePageBlock, getDatabases, updatePage, updatePageBlock } from '../lib/data'
 import { DATA_KITS, SECTION_PRESETS, STYLE_PACKS, resolveCreativeConfig, type StylePack } from '../lib/creativePresets'
 import { PAGE_TEMPLATES, resolveTemplateConfig, type TemplateCategory, type TemplateBlock } from '../lib/templates'
 import type { Database, FieldType, Page, PageBlock } from '../types'
 import FriendlyRecordForm from './FriendlyRecordForm'
+import './TemplatePanelDialog.css'
 
 type Props = { page: Page; blocks: PageBlock[]; databases: Database[]; database: Database | null; onRefresh?:()=>Promise<void>|void }
 type LibraryMode = 'templates' | 'sections' | 'styles' | 'data'
 type SourcePreset = { id: string; name: string; description: string; icon: string; fields: Array<{ name: string; type: FieldType }> }
 type ConnectionRequirement = { key:string; name:string; description:string; powers:string[]; fields:Array<{name:string;type:FieldType}> }
 type PendingTemplate = { templateId:string; applyMode:'replace'|'add'; requirements:ConnectionRequirement[] }
+type PendingReplace = { templateId:string; resolved:Record<string,string> }
 
 const categories: Array<'All' | TemplateCategory> = ['All', 'Witchy', 'Books', 'Budget', 'Podcast', 'Travel', 'Boards']
 const SOURCE_PRESETS: SourcePreset[] = [
@@ -41,6 +43,7 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
   const [sourceName, setSourceName] = useState('Transactions')
   const [preferredDb, setPreferredDb] = useState(database?.id || databases[0]?.id || '')
   const [pendingTemplate, setPendingTemplate] = useState<PendingTemplate | null>(null)
+  const [pendingReplace, setPendingReplace] = useState<PendingReplace | null>(null)
   const [connections, setConnections] = useState<Record<string,string>>({})
 
   const databaseId = preferredDb || database?.id || databases[0]?.id || ''
@@ -108,15 +111,19 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
   const startTemplate = (templateId:string, applyMode:'replace'|'add') => {
     const template=PAGE_TEMPLATES.find(item=>item.id===templateId);if(!template)return
     const requirements=getTemplateRequirements(template)
-    if(!requirements.length){void applyResolvedTemplate(templateId,applyMode,{});return}
+    if(!requirements.length){void requestTemplateApply(templateId,applyMode,{});return}
     const initial:Record<string,string>={}
     for(const req of requirements){const match=databases.find(db=>db.name.toLowerCase()===req.name.toLowerCase());initial[req.key]=match?.id || '__create__'}
     setConnections(initial);setPendingTemplate({templateId,applyMode,requirements});clearMessages()
   }
 
-  const applyResolvedTemplate = async (templateId:string, applyMode:'replace'|'add', resolved:Record<string,string>) => {
+  const requestTemplateApply = async (templateId:string, applyMode:'replace'|'add', resolved:Record<string,string>) => {
+    if(applyMode==='replace'&&blocks.length){setPendingReplace({templateId,resolved});return}
+    await performTemplateApply(templateId,applyMode,resolved)
+  }
+
+  const performTemplateApply = async (templateId:string, applyMode:'replace'|'add', resolved:Record<string,string>) => {
     const template=PAGE_TEMPLATES.find(item=>item.id===templateId);if(!template)return
-    if(applyMode==='replace' && blocks.length && !window.confirm(`Replace the current visual design with “${template.name}”? Your databases and records will stay intact.`))return
     setBusy(`${templateId}:${applyMode}`);clearMessages()
     try{
       if(applyMode==='replace'){await Promise.all(blocks.map(block=>deletePageBlock(block.id)));await updatePage(page.id,{settings:{...page.settings,...template.settings}})}
@@ -130,7 +137,7 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
         if(applyMode==='add')config.zIndex=Number(config.zIndex||1)+zOffset
         await createPageBlock(page.id,seed.type,(applyMode==='add'?blocks.length:0)+i,config)
       }
-      await refresh();refreshWorkspace();setPendingTemplate(null)
+      await refresh();refreshWorkspace();setPendingTemplate(null);setPendingReplace(null)
       setNotice(`${template.name} applied. Every data connection can still be changed from the element itself.`)
     }catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(null)}
   }
@@ -156,7 +163,8 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
       refreshWorkspace()
       await refresh()
       if (createdNames.length) setNotice(`Created ${createdNames.join(' and ')}. Applying the template now…`)
-      await applyResolvedTemplate(pendingTemplate.templateId,pendingTemplate.applyMode,resolved)
+      setBusy(null)
+      await requestTemplateApply(pendingTemplate.templateId,pendingTemplate.applyMode,resolved)
     }catch(e){setError(e instanceof Error?e.message:String(e));setBusy(null)}
   }
 
@@ -186,7 +194,16 @@ export default function TemplatePanel({ page, blocks, databases, database, onRef
     catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(null)}
   }
 
+  const replaceTemplate=pendingReplace?PAGE_TEMPLATES.find(template=>template.id===pendingReplace.templateId):null
+
   return <div className="atlas-template-panel">
+    {pendingReplace&&replaceTemplate&&<div className="atlas-confirm-backdrop" data-workspace-interactive onPointerDown={event=>event.stopPropagation()}>
+      <section className="atlas-confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="atlas-replace-title">
+        <div className="atlas-confirm-icon"><AlertTriangle/></div>
+        <div className="atlas-confirm-copy"><span>TEMPLATE</span><strong id="atlas-replace-title">Replace this page layout?</strong><p><b>{replaceTemplate.name}</b> will replace the current visual composition. Your databases, records, documents, assets, and approved data connections will remain intact.</p></div>
+        <div className="atlas-confirm-actions"><button type="button" onClick={()=>setPendingReplace(null)}>Keep current page</button><button type="button" className="danger" disabled={Boolean(busy)} onClick={()=>void performTemplateApply(pendingReplace.templateId,'replace',pendingReplace.resolved)}>{busy?'Replacing…':'Replace layout'}</button></div>
+      </section>
+    </div>}
     <div className="atlas-template-intro"><Sparkles/><div><strong>Build something gorgeous</strong><span>Pages, sections, styles, and connected data. Nothing gets linked without you seeing it.</span></div></div>
     <div className="atlas-creative-mode-tabs"><button className={mode==='templates'?'active':''} onClick={()=>setMode('templates')}><LayoutTemplate/>Pages</button><button className={mode==='sections'?'active':''} onClick={()=>setMode('sections')}><Layers3/>Sections</button><button className={mode==='styles'?'active':''} onClick={()=>setMode('styles')}><Palette/>Styles</button><button className={mode==='data'?'active':''} onClick={()=>setMode('data')}><DatabaseIcon/>Data</button></div>
     {(mode==='templates'||mode==='sections'||mode==='styles')&&<div className="atlas-template-search"><Search/><input placeholder={`Search ${mode}`} value={query} onChange={e=>setQuery(e.target.value)}/></div>}
