@@ -6,6 +6,7 @@
   padding: 0 !important;
 }
 
-.canvas-element.type-widget > .atlas-widget-shell {
-  border-radius: inherit !important;
-}
+/* Radius is synchronized by editorRuntimeEnhancements so both newer blocks that
+   use the main Radius control and older widgets that still carry widgetRadius
+   keep their visible rounded corners. Do not force inherit here, because that
+   erases an older widget's own saved radius when the outer frame radius is 0. */
