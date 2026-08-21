@@ -1,0 +1,25 @@
+/* Keep deep design pickers centered inside the inspector so every control remains usable. */
+.atlas-context-inspector .atlas-color-popover,
+.atlas-context-inspector .atlas-font-popover {
+  position: fixed !important;
+  left: auto !important;
+  right: 25px !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translateY(-50%) !important;
+  width: 310px !important;
+  max-width: calc(100vw - 50px) !important;
+  max-height: calc(100vh - 140px) !important;
+  overflow: auto !important;
+  z-index: 1005 !important;
+}
+
+@media (max-width: 760px) {
+  .atlas-context-inspector .atlas-color-popover,
+  .atlas-context-inspector .atlas-font-popover {
+    left: 20px !important;
+    right: 20px !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
