@@ -1,10 +1,99 @@
+/* Atlas live-workspace chrome. Keep controls at the viewport edges and let the page stay visually dominant. */
+.atlas-tool-rail{
+  position:fixed!important;
+  left:14px!important;
+  top:112px!important;
+  width:48px!important;
+  z-index:345!important;
+  display:grid!important;
+  gap:4px!important;
+  padding:6px!important;
+  border:1px solid rgba(208,198,187,.92)!important;
+  border-radius:16px!important;
+  background:rgba(251,249,245,.94)!important;
+  box-shadow:0 14px 38px rgba(37,31,26,.12)!important;
+  backdrop-filter:blur(12px);
+}
+.atlas-tool-rail button{
+  width:36px!important;
+  min-width:36px!important;
+  height:40px!important;
+  min-height:40px!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:10px!important;
+  display:grid!important;
+  place-items:center!important;
+  background:transparent!important;
+  color:#6d6258!important;
+}
+.atlas-tool-rail button:hover,.atlas-tool-rail button.active{background:#eee8df!important;color:#2d2823!important}
+.atlas-tool-rail button svg{width:17px!important;height:17px!important}
+.atlas-tool-rail button span{display:none!important}
+
+.atlas-workspace-toolbox{
+  position:fixed!important;
+  left:72px!important;
+  top:104px!important;
+  bottom:20px!important;
+  width:min(310px,calc(100vw - 104px))!important;
+  z-index:350!important;
+  display:grid!important;
+  grid-template-rows:auto minmax(0,1fr)!important;
+  overflow:hidden!important;
+  background:#faf8f4!important;
+  color:#29241f!important;
+  border:1px solid #d7cec3!important;
+  border-radius:18px!important;
+  box-shadow:0 22px 64px rgba(30,25,20,.16)!important;
+}
+
+.workspace-floating-toolbar-wrap{position:fixed;z-index:370}
+.workspace-floating-toolbar{
+  position:relative!important;
+  inset:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:2px!important;
+  width:auto!important;
+  min-height:38px!important;
+  padding:4px!important;
+  border:1px solid #d6cec4!important;
+  border-radius:999px!important;
+  background:rgba(253,251,248,.97)!important;
+  color:#3f3832!important;
+  box-shadow:0 10px 30px rgba(34,28,23,.13)!important;
+  backdrop-filter:blur(12px);
+}
+.workspace-floating-toolbar button{
+  min-width:30px!important;height:30px!important;border:0!important;border-radius:999px!important;background:transparent!important;color:inherit!important;padding:0 8px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important;cursor:pointer
+}
+.workspace-floating-toolbar button:hover{background:#eee8df!important}
+.workspace-floating-toolbar button svg{width:15px!important;height:15px!important}
+.workspace-floating-toolbar .toolbar-style-action span{font-size:11px;font-weight:700}
+.workspace-object-menu{
+  position:absolute;
+  top:46px;
+  right:0;
+  width:176px;
+  display:grid;
+  gap:3px;
+  padding:6px;
+  border:1px solid #d6cec4;
+  border-radius:12px;
+  background:#fdfbf8;
+  box-shadow:0 14px 34px rgba(34,28,23,.16);
+}
+.workspace-object-menu button{min-height:34px;border:0;border-radius:8px;background:transparent;color:#413a34;padding:7px 9px;display:flex;align-items:center;gap:8px;text-align:left;font-size:11px;cursor:pointer}
+.workspace-object-menu button:hover{background:#eee8df}.workspace-object-menu svg{width:14px;height:14px}
+
 .atlas-context-inspector{
   position:fixed!important;
-  top:76px!important;
+  top:96px!important;
   right:18px!important;
   bottom:18px!important;
   left:auto!important;
-  width:min(360px,calc(100vw - 36px))!important;
+  width:min(324px,calc(100vw - 36px))!important;
   z-index:360!important;
   display:grid!important;
   grid-template-rows:auto minmax(0,1fr)!important;
@@ -16,13 +105,43 @@
   border-radius:18px!important;
   box-shadow:0 22px 64px rgba(30,25,20,.18)!important;
 }
-.atlas-context-inspector .atlas-edit-scroll{min-height:0;overflow:auto;overscroll-behavior:contain}
-.atlas-context-inspector .atlas-inspector-heading{position:relative;z-index:1;background:#faf8f4}
+.atlas-context-inspector .atlas-inspector-heading{
+  position:relative!important;
+  z-index:1;
+  min-height:70px;
+  padding:15px 52px 13px 16px!important;
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  align-content:center!important;
+  gap:2px!important;
+  border-bottom:1px solid #e5ddd3!important;
+  background:#faf8f4!important;
+}
+.atlas-context-inspector .atlas-inspector-heading>span{display:block!important;font-size:8px!important;font-weight:800!important;letter-spacing:.14em!important;color:#887a6e!important;line-height:1.2!important}
+.atlas-context-inspector .atlas-inspector-heading>strong{display:block!important;min-width:0!important;font:600 19px/1.1 Georgia,serif!important;color:#2c2723!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.atlas-context-inspector .atlas-inspector-heading>button{position:absolute!important;right:12px!important;top:14px!important;width:34px!important;height:34px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#4c443d!important;display:grid!important;place-items:center!important}
+.atlas-context-inspector .atlas-inspector-heading>button:hover{background:#eee8df!important}
+.atlas-context-inspector .atlas-inspector-heading svg{width:18px;height:18px}
+.atlas-context-inspector .atlas-edit-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px!important}
+.atlas-context-inspector .atlas-design-panel{display:grid!important;gap:9px!important}
+.atlas-context-inspector .atlas-binding-identity{padding:12px!important;border-radius:13px!important}
+.atlas-context-inspector .atlas-binding-identity strong{font-size:16px!important}
+.atlas-context-inspector .atlas-selected-actions-wide{display:none!important}
+.atlas-context-inspector .atlas-edit-section-title{margin:8px 0 4px!important;font-size:8px!important;color:#8b7d70!important}
+.atlas-context-inspector .atlas-control-grid.four{grid-template-columns:1fr 1fr!important}
+.atlas-context-inspector .atlas-control-grid.two{grid-template-columns:1fr 1fr!important}
+.atlas-context-inspector .atlas-control input,.atlas-context-inspector .atlas-control select,.atlas-context-inspector .atlas-control textarea{min-height:36px!important}
+.atlas-context-inspector .atlas-layer-actions{grid-template-columns:1fr 1fr!important}
+.atlas-context-inspector .atlas-lock-row{margin-top:2px!important}
+.atlas-context-inspector .atlas-editor-disclosure{background:#fff!important}
+
+@media(max-width:900px){
+  .atlas-tool-rail{left:8px!important;top:92px!important}
+  .atlas-workspace-toolbox{left:62px!important;top:86px!important;width:min(300px,calc(100vw - 78px))!important}
+}
 @media(max-width:700px){
-  .atlas-context-inspector{
-    inset:auto 8px 8px 8px!important;
-    width:auto!important;
-    max-height:76vh;
-    border-radius:18px!important;
-  }
+  .atlas-tool-rail{top:auto!important;bottom:74px!important;left:8px!important;grid-auto-flow:column!important;width:auto!important}
+  .atlas-workspace-toolbox{inset:auto 8px 72px 8px!important;width:auto!important;max-height:68vh!important}
+  .atlas-context-inspector{inset:auto 8px 8px 8px!important;width:auto!important;max-height:76vh;border-radius:18px!important}
+  .workspace-object-menu{right:auto;left:0}
 }
