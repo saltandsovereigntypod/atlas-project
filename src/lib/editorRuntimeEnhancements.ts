@@ -24,14 +24,19 @@ export function installEditorRuntimeEnhancements(){
   document.querySelectorAll<HTMLElement>('.canvas-element.type-widget').forEach(frame=>{
    const shell=frame.querySelector<HTMLElement>(':scope > .atlas-widget-shell')
    if(!shell)return
-   if(shell.dataset.atlasOriginalRadius===undefined)shell.dataset.atlasOriginalRadius=shell.style.borderRadius||''
-   const frameRadius=getComputedStyle(frame).borderTopLeftRadius
-   const hasFrameRadius=frameRadius&&frameRadius!=='0px'
-   const desired=hasFrameRadius?frameRadius:(shell.dataset.atlasOriginalRadius||'0px')
+   const desired=getComputedStyle(frame).borderTopLeftRadius||'0px'
    if(shell.style.getPropertyValue('border-radius')!==desired||shell.style.getPropertyPriority('border-radius')!=='important')shell.style.setProperty('border-radius',desired,'important')
   })
  }
- syncWidgetRadii()
- const observer=new MutationObserver(()=>syncWidgetRadii())
+
+ const clarifyCornerRadiusLabel=()=>{
+  document.querySelectorAll<HTMLElement>('.atlas-editor-disclosure-body .atlas-control > span').forEach(label=>{
+   if(label.textContent?.trim()==='Radius')label.textContent='Corner radius'
+  })
+ }
+
+ const sync=()=>{syncWidgetRadii();clarifyCornerRadiusLabel()}
+ sync()
+ const observer=new MutationObserver(sync)
  observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']})
 }
