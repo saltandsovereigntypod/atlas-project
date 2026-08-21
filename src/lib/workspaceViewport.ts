@@ -4,6 +4,7 @@ export type WorkspaceViewportState={zoom:number;panX:number;panY:number}
 export type ScreenPoint={x:number;y:number}
 export type WorldRect={x:number;y:number;width:number;height:number}
 export type ResizeEdge='n'|'s'|'e'|'w'|'ne'|'nw'|'se'|'sw'
+export type PointerOwner='workspace'|'object'|'interactive'|'resize'
 export const MIN_ZOOM=.25,MAX_ZOOM=2
 export const clampZoom=(zoom:number)=>Math.min(MAX_ZOOM,Math.max(MIN_ZOOM,zoom))
 export const worldToScreen=(point:ScreenPoint,viewport:WorkspaceViewportState,origin:ScreenPoint={x:0,y:0}):ScreenPoint=>({x:origin.x+viewport.panX+point.x*viewport.zoom,y:origin.y+viewport.panY+point.y*viewport.zoom})
@@ -21,3 +22,6 @@ export function beginWorkspacePointerTransaction({event,zoom,threshold=5,onStart
 }
 
 export function resizeRect(origin:WorldRect,edge:ResizeEdge,dx:number,dy:number,minWidth=70,minHeight=35):WorldRect{let{x,y,width,height}=origin;if(edge.includes('e'))width=Math.max(minWidth,width+dx);if(edge.includes('s'))height=Math.max(minHeight,height+dy);if(edge.includes('w')){const next=Math.min(origin.x+origin.width-minWidth,origin.x+dx);width=origin.width+(origin.x-next);x=Math.max(0,next)}if(edge.includes('n')){const next=Math.min(origin.y+origin.height-minHeight,origin.y+dy);height=origin.height+(origin.y-next);y=Math.max(0,next)}return{x,y,width,height}}
+
+export function pointerOwner(event:{composedPath():EventTarget[]}):PointerOwner{for(const node of event.composedPath()){if(!(node instanceof HTMLElement))continue;if(node.dataset.workspaceResize!==undefined)return'resize';if(node.dataset.workspaceInteractive!==undefined||node.isContentEditable||/^(A|BUTTON|INPUT|SELECT|TEXTAREA|AUDIO|VIDEO)$/.test(node.tagName))return'interactive';if(node.dataset.workspaceObject!==undefined)return'object';if(node.dataset.workspacePan!==undefined)return'workspace'}return'workspace'}
+export function positionAnchoredPopover(anchor:{x:number;y:number;width:number;height:number},viewport:{left:number;top:number;right:number;bottom:number},size:{width:number;height:number},gap=10){const centered=anchor.x+anchor.width/2-size.width/2,left=Math.max(viewport.left+8,Math.min(viewport.right-size.width-8,centered));const above=anchor.y-size.height-gap,below=anchor.y+anchor.height+gap;const top=above>=viewport.top+8?above:Math.min(viewport.bottom-size.height-8,below);return{left,top}}
