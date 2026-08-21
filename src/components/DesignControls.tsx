@@ -26,13 +26,14 @@ export function DesignColorPicker({label,value,fallback,allowGradient=false,onCh
  const commitRecent=(hex:string)=>{const next=[hex.toUpperCase(),...readRecent().filter(item=>item.toUpperCase()!==hex.toUpperCase())].slice(0,10);localStorage.setItem(RECENT_KEY,JSON.stringify(next));setRecent(next)}
  const commitSolid=(hex:string)=>{const next=safeHex(hex,solid);setSolid(next);commitRecent(next);onChange(next)}
  const commitGradient=(a=from,b=to,deg=angle,type=gradientType)=>{commitRecent(a);commitRecent(b);onChange(type==='radial'?`radial-gradient(circle, ${a}, ${b})`:`linear-gradient(${deg}deg, ${a}, ${b})`)}
+ const chooseMode=(next:'solid'|'gradient')=>{setMode(next);if(next==='gradient')commitGradient();else commitSolid(solid)}
  const eyedrop=async()=>{const EyeDropper=(window as unknown as {EyeDropper?:new()=>{open:()=>Promise<{sRGBHex:string}>}}).EyeDropper;if(!EyeDropper)return;try{const result=await new EyeDropper().open();commitSolid(result.sRGBHex)}catch{}}
  const preview=mode==='gradient'?(gradientType==='radial'?`radial-gradient(circle, ${from}, ${to})`:`linear-gradient(${angle}deg, ${from}, ${to})`):solid
  return <div className="atlas-color-control" ref={root}>
   <button type="button" className="atlas-color-role" title={`Change ${label}`} onClick={()=>setOpen(v=>!v)}><i style={{background:preview}}/><span>{label}</span></button>
   {open&&<div className="atlas-color-popover" onPointerDown={event=>event.stopPropagation()}>
    <div className="atlas-design-popover-head"><strong>{label}</strong><button type="button" onClick={()=>setOpen(false)}><X/></button></div>
-   {allowGradient&&<div className="atlas-segmented"><button className={mode==='solid'?'active':''} onClick={()=>setMode('solid')}>Solid</button><button className={mode==='gradient'?'active':''} onClick={()=>setMode('gradient')}>Gradient</button></div>}
+   {allowGradient&&<div className="atlas-segmented"><button className={mode==='solid'?'active':''} onClick={()=>chooseMode('solid')}>Solid</button><button className={mode==='gradient'?'active':''} onClick={()=>chooseMode('gradient')}>Gradient</button></div>}
    {mode==='solid'?<>
     <div className="atlas-color-main-row"><label className="atlas-native-color"><input type="color" value={solid} onChange={event=>commitSolid(event.target.value)}/><span style={{background:solid}}><Droplet/></span></label><input className="atlas-color-hex" value={solid.toUpperCase()} onChange={event=>setSolid(event.target.value)} onBlur={event=>commitSolid(event.target.value)}/>{supportsEyeDropper()&&<button type="button" className="atlas-eyedropper" title="Eyedropper" onClick={()=>void eyedrop()}><Pipette/></button>}</div>
    </>:<div className="atlas-gradient-controls">
