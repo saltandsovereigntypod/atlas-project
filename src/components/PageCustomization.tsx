@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Check, Palette, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 import TemplatePanel from './TemplatePanel'
+import { ColorRoleStrip } from './DesignControls'
 import { STYLE_PACKS } from '../lib/creativePresets'
 import { applyPageStylePack } from '../lib/pageStyling'
 import type { Database, Page, PageBlock } from '../types'
@@ -23,9 +24,9 @@ export default function PageCustomization({page,blocks,databases,database,onSave
    </button>})}</div>
    {message&&<p className="page-customization-message">{message}</p>}
    <div className="page-panel-title">Page appearance</div>
+   <p className="page-template-safety">Color controls stay compact until you open one. Backgrounds can be solid or gradient, and every picker can reuse colors already visible on the page or your ten most recent manual choices.</p>
+   <ColorRoleStrip roles={[{key:'background',label:'Background',value:page.settings.background,fallback:'#fbfaf7',allowGradient:true},{key:'textColor',label:'Default text',value:page.settings.textColor,fallback:'#211e1a'}]} onChange={(key,value)=>void onSaveSettings({[key]:value,stylePackId:null})}/>
    <div className="page-appearance-grid">
-    <label><span>Background</span><input type="color" value={safeColor(page.settings.background,'#fbfaf7')} onChange={event=>void onSaveSettings({background:event.target.value,stylePackId:null})}/></label>
-    <label><span>Default text</span><input type="color" value={safeColor(page.settings.textColor,'#211e1a')} onChange={event=>void onSaveSettings({textColor:event.target.value,stylePackId:null})}/></label>
     <label className="wide"><span>Background image</span><input value={String(page.settings.backgroundImage||'')} placeholder="Paste an image URL" onBlur={event=>void onSaveSettings({backgroundImage:event.target.value})}/></label>
     <label className="wide"><span>Canvas height</span><input type="number" min="600" value={Number(page.settings.canvasHeight||1100)} onChange={event=>void onSaveSettings({canvasHeight:+event.target.value})}/></label>
    </div>
@@ -35,4 +36,3 @@ export default function PageCustomization({page,blocks,databases,database,onSave
   </>}</div>
  </aside>
 }
-function safeColor(value:unknown,fallback:string){const text=String(value||'');return /^#[0-9a-f]{6}$/i.test(text)?text:fallback}
