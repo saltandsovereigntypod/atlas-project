@@ -31,6 +31,7 @@ import './information-architecture.css'
 import './editor-clarity.css'
 import './workspace-overlays.css'
 import './design-controls.css'
+import './widget-surface-fix.css'
 
 installTemplateEnhancements()
 installTemplateLiveViews()
