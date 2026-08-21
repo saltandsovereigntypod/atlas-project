@@ -4,6 +4,7 @@ import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { installTemplateEnhancements } from './lib/templateEnhancements'
 import { installTemplateLiveViews } from './lib/templateLiveViews'
+import { installEditorRuntimeEnhancements } from './lib/editorRuntimeEnhancements'
 import './styles.css'
 import './atlas.css'
 import './navigation.css'
@@ -29,9 +30,11 @@ import './canvas-card-sidebar.css'
 import './information-architecture.css'
 import './editor-clarity.css'
 import './workspace-overlays.css'
+import './design-controls.css'
 
 installTemplateEnhancements()
 installTemplateLiveViews()
+installEditorRuntimeEnhancements()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode><HashRouter><App /></HashRouter></React.StrictMode>,
