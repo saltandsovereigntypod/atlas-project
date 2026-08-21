@@ -21,4 +21,4 @@
 .atlas-inline-record-edit:hover{opacity:1!important;background:color-mix(in srgb,var(--widget-muted) 10%,transparent)}
 .is-inline-editing{outline:1px solid color-mix(in srgb,var(--widget-accent) 45%,transparent);outline-offset:2px;border-radius:4px;background:var(--widget-surface,#fff)!important}
 
-body:not(.atlas-editing) .widget-list input,body:not(.atlas-editing) .widget-list button,body:not(.atlas-editing) .widget-capture input,body:not(.atlas-editing) .widget-capture button,body:not(.atlas-editing) .widget-form input,body:not(.atlas-editing) .widget-form button,body:not(.atlas-editing) .widget-kanban a{pointer-events:auto}
+.widget-list input,.widget-list button,.widget-capture input,.widget-capture button,.widget-form input,.widget-form button,.widget-kanban a{pointer-events:auto}
