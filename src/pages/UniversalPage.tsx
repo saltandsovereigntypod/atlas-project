@@ -302,6 +302,7 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   const locked = Boolean(config.locked)
   const hidden = Boolean(config.hidden)
   const commit = (patch: BlockPatch) => { const next = { ...config, ...patch }; setConfig(next); onSave(patch) }
+  const bodyDraggable=['image','divider','metric','progress','section'].includes(block.type)
 
   const drag = (event: ReactPointerEvent<HTMLElement>) => {if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin={x:Number(config.x||0),y:Number(config.y||0)};beginWorkspacePointerTransaction({event,zoom,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,x:Math.max(0,origin.x+dx),y:Math.max(0,origin.y+dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y});return current})})}
   const resize = (edge:ResizeEdge)=>(event:ReactPointerEvent<HTMLElement>)=>{if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin=blockRect({...block,config});beginWorkspacePointerTransaction({event,zoom,threshold:0,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,...resizeRect(origin,edge,dx,dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y,width:current.width,height:current.height});return current})})}
