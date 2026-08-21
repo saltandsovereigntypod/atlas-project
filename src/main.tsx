@@ -28,6 +28,7 @@ import './canvas-card-view.css'
 import './canvas-card-sidebar.css'
 import './information-architecture.css'
 import './editor-clarity.css'
+import './workspace-overlays.css'
 
 installTemplateEnhancements()
 installTemplateLiveViews()
