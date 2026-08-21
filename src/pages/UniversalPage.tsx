@@ -174,13 +174,13 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     setSelection({ kind: created.type === 'database_view' ? 'database_view' : 'page_block', id: created.id })
   }
 
-  const addBlock = async (type: PageBlockType) => {
+  const addBlock = async (type: PageBlockType, preset: BlockPatch = {}) => {
     if (!page) return
     const offset = blocks.length % 8
     let config: BlockPatch = {
       x: 60 + offset * 30, y: 90 + offset * 30,
-      width: type === 'database_view' || type === 'section' ? 700 : type === 'widget' ? 360 : 320,
-      height: type === 'image' ? 280 : type === 'database_view' ? 390 : type === 'section' ? 320 : type === 'widget' ? 220 : 140,
+      width: type === 'database_view' || type === 'section' ? 700 : type === 'shape' ? 240 : type === 'widget' ? 360 : 320,
+      height: type === 'image' ? 280 : type === 'database_view' ? 390 : type === 'section' ? 320 : type === 'shape' ? 180 : type === 'widget' ? 220 : 140,
       rotation: 0, zIndex: Math.max(1, ...blocks.map(block => Number(block.config?.zIndex || 1))) + 1,
       background: 'transparent', textColor: '#211e1a', radius: 0, padding: 0,
     }
@@ -188,7 +188,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     if (type === 'text') config = { ...config, text: 'Start writing…', fontSize: 17, fontWeight: 400, fontFamily: 'Georgia, serif', lineHeight: 1.5, letterSpacing: 0, textAlign: 'left' }
     if (type === 'callout') config = { ...config, text: 'Add a note…', background: '#f0ebe3', padding: 18, radius: 14, fontSize: 17, fontFamily: 'Georgia, serif' }
     if (type === 'image') config = { ...config, url: '', fit: 'cover', radius: 14 }
-    if (type === 'document') { const doc = await createDocument(workspace.id, user.id, 'Untitled document', page.id); config = { ...config, documentId: doc.id, width: 360, height: 170, background: '#fffdfa', radius: 16, padding: 20 } }
+    if (type === 'document') { const doc = await createDocument(workspace.id, user.id, 'Untitled document', page.id); config = { ...config, documentId: doc.id, width: 360, height: 190, background: '#fffdfa', radius: 16, padding: 20, displayMode: 'summary', manualSummary: '', documentTags: '', showDocumentMeta: true } }
     if (type === 'audio') config = { ...config, title: 'Audio', width: 420, height: 130, background: '#fffdfa', radius: 16, padding: 18 }
     if (type === 'file') config = { ...config, title: 'Attachment', width: 360, height: 110, background: '#fffdfa', radius: 14, padding: 18 }
     if (type === 'button') config = { ...config, label: 'Button', url: '', background: '#24211d', textColor: '#ffffff', width: 180, height: 60, radius: 12 }
@@ -196,9 +196,11 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     if (type === 'property') config = { ...config, fieldId: '__title__', label: '', display: 'default' }
     if (type === 'metric') config = { ...config, label: 'Total', databaseId: database?.id || databases[0]?.id || '', width: 220, height: 130 }
     if (type === 'progress') config = { ...config, label: 'Progress', fieldId: fields.find(field => field.type === 'number')?.id || '', value: 50, max: 100, width: 360, height: 100 }
-    if (type === 'divider') config = { ...config, width: 420, height: 28 }
-    if (type === 'section') config = { ...config, title: 'Structured section', background: '#ffffff', border: '#ded6cb', radius: 20, padding: 24 }
+    if (type === 'divider') config = { ...config, width: 420, height: 28, dividerColor: '#8f8276' }
+    if (type === 'section') config = { ...config, background: '#fffdfa', border: '#ded6cb', borderColor: '#ded6cb', borderWidth: 1, radius: 20, padding: 0, width: 420, height: 260 }
+    if (type === 'shape') config = { ...config, shapeKind: 'rectangle', background: '#e7ded2', border: '#cfc3b5', borderColor: '#cfc3b5', borderWidth: 1, radius: 18, padding: 0, width: 240, height: 180 }
     if (type === 'widget') config = { ...config, widgetType: 'digital_clock', background: '#ffffff', textColor: '#211e1a', radius: 18, padding: 20, fontSize: 16, databaseId: database?.id || databases[0]?.id || '' }
+    config = { ...config, ...preset }
     const created = await createPageBlock(page.id, type, blocks.length, config)
     setBlocks(items => [...items, created])
     setSelection({ kind: type === 'database_view' ? 'database_view' : 'page_block', id: created.id })
@@ -210,7 +212,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     const created = await createPageBlock(page.id, type, blocks.length, {
       assetId: asset.id, url: asset.public_url || '', title: asset.name, mimeType: asset.mime_type,
       x: 70 + (blocks.length % 7) * 24, y: 110 + (blocks.length % 7) * 24,
-      width: type === 'audio' ? 420 : type === 'file' ? 360 : 360, height: type === 'image' ? 280 : type === 'audio' ? 130 : 110,
+      width: type === 'audio' ? 420 : 360, height: type === 'image' ? 280 : type === 'audio' ? 130 : 110,
       zIndex: Math.max(1, ...blocks.map(block => Number(block.config?.zIndex || 1))) + 1,
       background: type === 'image' ? 'transparent' : '#fffdfa', radius: 16, padding: type === 'image' ? 0 : 18, fit: 'cover',
     })
@@ -292,7 +294,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     {pageCustomizationOpen&&<PageCustomization page={page} blocks={blocks} databases={databases} database={database} onSaveSettings={savePageSettings} onRefresh={load} onClose={()=>setPageCustomizationOpen(false)}/>}
 
     {dataOpen && <DataDrawer database={database} record={record} databases={databases} fields={fields} onClose={() => setDataOpen(false)} onRecordChange={setRecord} onFieldsChange={setFields} />}
-    {openDocumentId && <DocumentEditor id={openDocumentId} onClose={()=>setOpenDocumentId(null)} />}
+    {openDocumentId && <DocumentEditor id={openDocumentId} onSaved={()=>window.dispatchEvent(new CustomEvent('atlas-document-updated',{detail:{id:openDocumentId}}))} onClose={()=>setOpenDocumentId(null)} />}
     {focusedViewId&&blocks.find(block=>block.id===focusedViewId)&&<div className="focused-card-design" role="dialog" aria-modal="true"><div className="focused-card-design-head"><div><span>CANVAS CARD</span><strong>Focused design</strong></div><button onClick={()=>setFocusedViewId(null)}><X/></button></div><div className="focused-card-design-stage"><DatabaseCanvasView blockId={focusedViewId} config={blocks.find(block=>block.id===focusedViewId)!.config} editing databases={databases} save={patch=>saveBlockPatch(focusedViewId,patch)}/></div></div>}
   </div>
 }
@@ -332,7 +334,7 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   } as CSSProperties
 
   return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(pointerOwner(event.nativeEvent)==='object'){onSelect();drag(event)}}}>
-    {selected&&!locked&&!pageLocked&&<>{['database_view','button','heading','text'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
+    {selected&&!locked&&!pageLocked&&<>{!['property'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
     <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
 }
@@ -348,7 +350,7 @@ function BlockContent({ block, page, config, zoom, manipulating, databases, reco
     const url = binding === 'page_cover' ? page.cover : String(config.url || '')
     return url ? <img className="canvas-image" src={url} alt="" style={{ objectFit: String(config.fit || 'cover') as CSSProperties['objectFit'] }} /> : <div className="canvas-image-placeholder"><span>Add an image from the Assets panel</span></div>
   }
-  if (block.type === 'document') return <DocumentCard id={String(config.documentId||'')} onOpen={onOpenDocument}/>
+  if (block.type === 'document') return <DocumentCard id={String(config.documentId||'')} config={config} onOpen={onOpenDocument}/>
   if (block.type === 'audio') return <div className="canvas-audio"><span>AUDIO</span><strong>{String(config.title||'Audio')}</strong>{config.url?<audio data-workspace-interactive controls src={String(config.url)}/>:<small>Choose audio from Assets</small>}</div>
   if (block.type === 'file') return <div className="canvas-file-shell"><span>FILE</span><a data-workspace-interactive className="canvas-file" href={String(config.url||'#')} target="_blank" rel="noreferrer"><strong>{String(config.title||'Attachment')}</strong><small>{String(config.mimeType||'Open or download')}</small></a></div>
   if (block.type === 'button') return <a data-workspace-interactive className="canvas-action-button" href={String(config.url || '#')}>{String(config.label || 'Button')}</a>
@@ -357,12 +359,19 @@ function BlockContent({ block, page, config, zoom, manipulating, databases, reco
   if (block.type === 'property') return <PropertyDisplay config={config} record={record} fields={fields} onRecordChange={onRecordChange} />
   if (block.type === 'metric') return <MetricDisplay config={config} />
   if (block.type === 'progress') return <ProgressDisplay config={config} record={record} fields={fields} />
-  if (block.type === 'section') return <div className="structured-section"><span className="structured-kicker">SECTION</span><strong>{String(config.title || 'Structured section')}</strong><p>Responsive content can live here while the rest of the page stays freeform.</p></div>
+  if (block.type === 'section') return <div className="canvas-box-surface" aria-label="Decorative box"/>
+  if (block.type === 'shape') return <div className={`canvas-shape-surface shape-${String(config.shapeKind||'rectangle')}`} aria-label={`${String(config.shapeKind||'rectangle')} shape`}/>
   if (block.type === 'widget') return <AtlasWidget config={config} editing={false} databases={databases} save={save} />
   return null
 }
 
-function DocumentCard({id,onOpen}:{id:string;onOpen:(id:string)=>void}){const[doc,setDoc]=useState<Awaited<ReturnType<typeof getDocument>>|null>(null);useEffect(()=>{if(id)getDocument(id).then(setDoc).catch(console.error)},[id]);const text=(doc?.body||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();const words=text?text.split(' ').length:0;return <div className="canvas-document-shell"><button data-workspace-interactive className="canvas-document" onClick={()=>onOpen(id)}><span>DOCUMENT</span><strong>{doc?.title||'Opening document…'}</strong><p>{text||'A focused space for notes and writing.'}</p><small>{words} words · {doc?new Date(doc.updated_at).toLocaleDateString():''}</small></button></div>}
+function DocumentCard({id,config,onOpen}:{id:string;config:BlockPatch;onOpen:(id:string)=>void}){
+  const[doc,setDoc]=useState<Awaited<ReturnType<typeof getDocument>>|null>(null)
+  const reload=()=>{if(id)getDocument(id).then(setDoc).catch(console.error)}
+  useEffect(()=>{reload();const handler=(event:Event)=>{const detail=(event as CustomEvent<{id?:string}>).detail;if(!detail?.id||detail.id===id)reload()};window.addEventListener('atlas-document-updated',handler);return()=>window.removeEventListener('atlas-document-updated',handler)},[id])
+  const text=(doc?.body||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim(),words=text?text.split(' ').length:0,mode=String(config.displayMode||'summary'),manual=String(config.manualSummary||'').trim(),summary=manual||text.slice(0,220)||'A focused space for notes and writing.',tags=String(config.documentTags||'').split(',').map(tag=>tag.trim()).filter(Boolean)
+  return <div className={`canvas-document-shell document-mode-${mode}`}><button data-workspace-interactive className="canvas-document" onClick={()=>onOpen(id)}><span>DOCUMENT</span><strong>{doc?.title||'Opening document…'}</strong>{mode==='full'&&<p className="document-card-full">{text||summary}</p>}{mode==='summary'&&<p>{summary}</p>}{(mode==='title_tags'||(mode!=='title'&&mode!=='full'&&mode!=='summary'))&&tags.length>0&&<div className="document-card-tags">{tags.map(tag=><i key={tag}>{tag}</i>)}</div>}{(mode==='summary'||mode==='full')&&tags.length>0&&<div className="document-card-tags">{tags.map(tag=><i key={tag}>{tag}</i>)}</div>}{Boolean(config.showDocumentMeta??true)&&mode!=='title'&&<small>{words} words · {doc?new Date(doc.updated_at).toLocaleDateString():''}</small>}</button></div>
+}
 
 function PropertyDisplay({ config, record, fields, onRecordChange }: { config: BlockPatch; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void }) {
   if (!record) return <div className="canvas-data-empty">This element needs a record page.</div>
