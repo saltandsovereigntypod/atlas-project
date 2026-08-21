@@ -4,7 +4,7 @@ import FriendlyRecordForm from './FriendlyRecordForm'
 import { createDatabase, createField, deleteField, getFields, updateField } from '../lib/data'
 import type { Database, Field, FieldType, Page } from '../types'
 
-type Props = { page:Page; database:Database|null; databases:Database[]; onOpenData:()=>void }
+type Props = { page:Page; database:Database|null; databases:Database[]; onOpenData:()=>void; onRefresh?:()=>Promise<void>|void }
 type Suggestion = { name:string; type:FieldType; note?:string }
 
 const TYPES:Array<{value:FieldType;label:string;help:string}> = [
@@ -57,7 +57,7 @@ const TASKS:Suggestion[]=[
 function suggestionsFor(name:string){const n=name.toLowerCase();if(/book|read|library|tbr/.test(n))return BOOKS;if(/episode|podcast/.test(n))return EPISODES;if(/transaction|budget|expense|bill|saving|money|finance/.test(n))return MONEY;if(/grimoire|spell|ritual|witch|altar|divination/.test(n))return WITCHY;if(/trip|travel|itinerary/.test(n))return TRAVEL;if(/task|project|todo|to-do/.test(n))return TASKS;return BASE}
 function typeLabel(type:FieldType){return TYPES.find(item=>item.value===type)?.label||type}
 
-export default function CollectionDataPanel({page,database,databases,onOpenData}:Props){
+export default function CollectionDataPanel({page,database,databases,onOpenData,onRefresh}:Props){
  const [activeId,setActiveId]=useState(database?.id||databases[0]?.id||''),[fields,setFields]=useState<Field[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[newName,setNewName]=useState(''),[newType,setNewType]=useState<FieldType>('text'),[showBuilder,setShowBuilder]=useState(false),[newCollection,setNewCollection]=useState('')
  useEffect(()=>{if(database?.id)setActiveId(database.id)},[database?.id])
  const active=databases.find(item=>item.id===activeId)||database||null
@@ -67,7 +67,7 @@ export default function CollectionDataPanel({page,database,databases,onOpenData}
  const suggestions=useMemo(()=>suggestionsFor(active?.name||''),[active?.name])
  const existing=useMemo(()=>new Set(editableFields.map(f=>f.name.trim().toLowerCase())),[editableFields])
  const missing=suggestions.filter(item=>!existing.has(item.name.toLowerCase()))
- const refreshPage=async()=>{const fn=(window as typeof window&{__atlasRefreshPage?:()=>Promise<void>|void}).__atlasRefreshPage;if(fn)await fn()}
+ const refreshPage=async()=>{await onRefresh?.()}
  const addField=async(name:string,type:FieldType)=>{if(!active||!name.trim())return;setBusy(true);setError('');setNotice('');try{await createField(active.id,{name:name.trim(),type,required:false,config:{}},fields.length);setNewName('');await refreshFields();setNotice(`${name.trim()} added to ${active.name}.`) }catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}}
  const createSuggested=async()=>{if(!active||!missing.length)return;setBusy(true);setError('');try{let position=fields.length;for(const field of missing){await createField(active.id,{name:field.name,type:field.type,required:false,config:{}},position++);}await refreshFields();setNotice(`Added ${missing.length} suggested field${missing.length===1?'':'s'}. You can rename, change, or delete any of them.`)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}}
  const createCollection=async()=>{if(!newCollection.trim())return;setBusy(true);setError('');try{const created=await createDatabase(page.workspace_id,newCollection.trim());setActiveId(created.id);setNewCollection('');await refreshPage();setNotice(`${created.name} is ready. Choose what it should track below.`)}catch(e){setError(e instanceof Error?e.message:String(e))}finally{setBusy(false)}}

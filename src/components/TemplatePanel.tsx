@@ -6,7 +6,7 @@ import { PAGE_TEMPLATES, resolveTemplateConfig, type TemplateCategory, type Temp
 import type { Database, FieldType, Page, PageBlock } from '../types'
 import FriendlyRecordForm from './FriendlyRecordForm'
 
-type Props = { page: Page; blocks: PageBlock[]; databases: Database[]; database: Database | null }
+type Props = { page: Page; blocks: PageBlock[]; databases: Database[]; database: Database | null; onRefresh?:()=>Promise<void>|void }
 type LibraryMode = 'templates' | 'sections' | 'styles' | 'data'
 type SourcePreset = { id: string; name: string; description: string; icon: string; fields: Array<{ name: string; type: FieldType }> }
 type ConnectionRequirement = { key:string; name:string; description:string; powers:string[]; fields:Array<{name:string;type:FieldType}> }
@@ -29,7 +29,7 @@ const episodeIdeaFields:Array<{name:string;type:FieldType}> = [
 ]
 const episodeFields = SOURCE_PRESETS.find(item => item.id === 'podcast')!.fields
 
-export default function TemplatePanel({ page, blocks, databases, database }: Props) {
+export default function TemplatePanel({ page, blocks, databases, database, onRefresh }: Props) {
   const [mode, setMode] = useState<LibraryMode>('templates')
   const [category, setCategory] = useState<(typeof categories)[number]>('All')
   const [query, setQuery] = useState('')
@@ -50,7 +50,7 @@ export default function TemplatePanel({ page, blocks, databases, database }: Pro
   const styleItems = useMemo(() => STYLE_PACKS.filter(item => !query.trim() || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [query])
   const kitItems = useMemo(() => DATA_KITS.filter(item => !query.trim() || `${item.name} ${item.description}`.toLowerCase().includes(query.toLowerCase())), [query])
 
-  const refresh = async () => { const fn = (window as typeof window & { __atlasRefreshPage?: () => Promise<void> | void }).__atlasRefreshPage; if (fn) await fn() }
+  const refresh = async () => { await onRefresh?.() }
   const refreshWorkspace = () => window.dispatchEvent(new Event('atlas-workspace-changed'))
   const clearMessages = () => { setError(''); setNotice('') }
 

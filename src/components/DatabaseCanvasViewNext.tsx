@@ -11,7 +11,7 @@ type Mode='gallery'|'list'|'rail'|'board'|'table'|'canvas'
 export default function DatabaseCanvasViewNext(props:Props){
  const mode=String(props.config.mode||'gallery') as Mode
  return <div className={`db-view-next mode-${mode}`} onPointerDown={e=>e.stopPropagation()}>
-  {mode==='canvas'?<CanvasMode {...props}/>:<LegacyDatabaseCanvasView {...props}/>} 
+  {mode==='canvas'?<CanvasMode {...props}/>:<LegacyDatabaseCanvasView {...props}/>}
  </div>
 }
 
@@ -31,7 +31,7 @@ function CanvasMode({config,editing,save}:Props){
  const createHere=async()=>{if(!databaseId||creating)return;setCreating(true);try{await createRecord(databaseId,'Untitled');await reload()}finally{setCreating(false)}}
  const saveLayout=(recordId:string,next:CanvasCardRecordLayout)=>save({canvasCardRecordLayouts:{...layouts,[recordId]:next},canvasCardSelectedRecordId:recordId})
  return <div className="db-canvas-mode">
-  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Select this view and choose a collection from the editor sidebar.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing={Boolean(config.inlineEditing)} onPatchField={patchRecord} showCreate={config.allowCreate!==false} onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})} recordLayouts={layouts} onChangeRecordLayout={saveLayout} selectedRecordId={String(config.canvasCardSelectedRecordId||'')} onSelectRecord={id=>save({canvasCardSelectedRecordId:id})}/>} 
+  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Use this view's object handle, then choose a collection in the inspector.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing onPatchField={patchRecord} showCreate onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})} recordLayouts={layouts} onChangeRecordLayout={saveLayout} selectedRecordId={String(config.canvasCardSelectedRecordId||'')} onSelectRecord={id=>save({canvasCardSelectedRecordId:id})}/>}
  </div>
 }
 

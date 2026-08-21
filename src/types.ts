@@ -17,3 +17,9 @@ export interface LayoutElement { id: string; layout_id: string; type: 'text' | '
 export interface Page { id: string; workspace_id: string; title: string; icon: string | null; cover: string | null; position: number; context_type: PageContextType; context_database_id: string | null; context_record_id: string | null; parent_id: string | null; favorite: boolean; settings: Record<string, unknown>; created_at: string; updated_at: string }
 export interface PageBlock { id: string; page_id: string; type: PageBlockType; position: number; config: Record<string, unknown>; created_at: string; updated_at: string }
 export interface DocumentObject { id: string; workspace_id: string; owner_id: string; title: string; body: string; parent_page_id: string | null; metadata: Record<string, unknown>; created_at: string; updated_at: string }
+export type WorkspaceSelection =
+  | { kind: 'page'; id: string }
+  | { kind: 'page_block'; id: string }
+  | { kind: 'database_view'; id: string }
+  | { kind: 'canvas_card_element'; id: string; parentId: string }
+  | { kind: 'canvas_card_record'; id: string; parentId: string }
