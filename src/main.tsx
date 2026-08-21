@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { installTemplateEnhancements } from './lib/templateEnhancements'
+import { installDashboardTemplateEnhancements } from './lib/dashboardTemplateEnhancements'
 import { installTemplateLiveViews } from './lib/templateLiveViews'
 import { installEditorRuntimeEnhancements } from './lib/editorRuntimeEnhancements'
 import './styles.css'
@@ -35,6 +36,7 @@ import './widget-surface-fix.css'
 import './design-popover-position.css'
 
 installTemplateEnhancements()
+installDashboardTemplateEnhancements()
 installTemplateLiveViews()
 installEditorRuntimeEnhancements()
 
