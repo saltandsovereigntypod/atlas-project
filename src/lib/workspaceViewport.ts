@@ -1,0 +1,23 @@
+import type { PointerEvent as ReactPointerEvent } from 'react'
+
+export type WorkspaceViewportState={zoom:number;panX:number;panY:number}
+export type ScreenPoint={x:number;y:number}
+export type WorldRect={x:number;y:number;width:number;height:number}
+export type ResizeEdge='n'|'s'|'e'|'w'|'ne'|'nw'|'se'|'sw'
+export const MIN_ZOOM=.25,MAX_ZOOM=2
+export const clampZoom=(zoom:number)=>Math.min(MAX_ZOOM,Math.max(MIN_ZOOM,zoom))
+export const worldToScreen=(point:ScreenPoint,viewport:WorkspaceViewportState,origin:ScreenPoint={x:0,y:0}):ScreenPoint=>({x:origin.x+viewport.panX+point.x*viewport.zoom,y:origin.y+viewport.panY+point.y*viewport.zoom})
+export const screenToWorld=(point:ScreenPoint,viewport:WorkspaceViewportState,origin:ScreenPoint={x:0,y:0}):ScreenPoint=>({x:(point.x-origin.x-viewport.panX)/viewport.zoom,y:(point.y-origin.y-viewport.panY)/viewport.zoom})
+export function zoomAt(viewport:WorkspaceViewportState,nextZoom:number,pointer:ScreenPoint,origin:ScreenPoint={x:0,y:0}):WorkspaceViewportState{const zoom=clampZoom(nextZoom),world=screenToWorld(pointer,viewport,origin);return{zoom,panX:pointer.x-origin.x-world.x*zoom,panY:pointer.y-origin.y-world.y*zoom}}
+export function fitRect(rect:WorldRect,viewportSize:{width:number;height:number},padding=64):WorkspaceViewportState{const zoom=clampZoom(Math.min((viewportSize.width-padding*2)/Math.max(1,rect.width),(viewportSize.height-padding*2)/Math.max(1,rect.height)));return{zoom,panX:padding-rect.x*zoom,panY:padding-rect.y*zoom}}
+
+type Transaction={event:ReactPointerEvent<HTMLElement>;zoom:number;threshold?:number;onStart?:()=>void;onMove:(dx:number,dy:number)=>void;onCommit:()=>void}
+export function beginWorkspacePointerTransaction({event,zoom,threshold=5,onStart,onMove,onCommit}:Transaction){
+ const target=event.currentTarget,startX=event.clientX,startY=event.clientY;let active=false
+ target.setPointerCapture(event.pointerId)
+ const move=(next:PointerEvent)=>{const sx=next.clientX-startX,sy=next.clientY-startY;if(!active&&Math.hypot(sx,sy)<threshold)return;if(!active){active=true;onStart?.()}onMove(sx/zoom,sy/zoom)}
+ const finish=()=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',finish);target.removeEventListener('pointercancel',finish);if(active)onCommit()}
+ target.addEventListener('pointermove',move);target.addEventListener('pointerup',finish);target.addEventListener('pointercancel',finish)
+}
+
+export function resizeRect(origin:WorldRect,edge:ResizeEdge,dx:number,dy:number,minWidth=70,minHeight=35):WorldRect{let{x,y,width,height}=origin;if(edge.includes('e'))width=Math.max(minWidth,width+dx);if(edge.includes('s'))height=Math.max(minHeight,height+dy);if(edge.includes('w')){const next=Math.min(origin.x+origin.width-minWidth,origin.x+dx);width=origin.width+(origin.x-next);x=Math.max(0,next)}if(edge.includes('n')){const next=Math.min(origin.y+origin.height-minHeight,origin.y+dy);height=origin.height+(origin.y-next);y=Math.max(0,next)}return{x,y,width,height}}

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowLeft, Grip, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Lock, Maximize, Minus, Plus, Trash2, Unlock, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAppContext } from '../App'
 import AtlasWidget from '../components/AtlasWidget'
@@ -12,6 +12,8 @@ import { createDocument, createField, createPageBlock, createRecord, deleteField
 import { displayValue } from '../lib/value'
 import type { AtlasAsset } from '../lib/assets'
 import type { Database as DatabaseType, Field, FieldType, Page, PageBlock, PageBlockType, RecordRow, WorkspaceSelection } from '../types'
+import FloatingObjectToolbar from '../components/FloatingObjectToolbar'
+import { beginWorkspacePointerTransaction, fitRect, resizeRect, zoomAt, type ResizeEdge, type WorkspaceViewportState, type WorldRect } from '../lib/workspaceViewport'
 
 type Kind = 'home' | 'page' | 'database' | 'record'
 type BlockPatch = Record<string, unknown>
@@ -30,6 +32,9 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   const [selection, setSelection] = useState<WorkspaceSelection | null>(null)
   const [dataOpen, setDataOpen] = useState(false)
   const [openDocumentId, setOpenDocumentId] = useState<string | null>(null)
+  const [focusedViewId,setFocusedViewId]=useState<string|null>(null)
+  const [viewport,setViewport]=useState<WorkspaceViewportState>({zoom:1,panX:40,panY:40})
+  const viewportRef=useRef<HTMLDivElement>(null),spacePressed=useRef(false)
   const [error, setError] = useState('')
 
   const load = async () => {
@@ -98,8 +103,13 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   }
 
   useEffect(() => { void load() }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
+  useEffect(()=>{if(!page)return;try{const saved=sessionStorage.getItem(`atlas:viewport:${page.id}`);setViewport(saved?JSON.parse(saved):{zoom:1,panX:40,panY:40})}catch{setViewport({zoom:1,panX:40,panY:40})}},[page?.id])
+  useEffect(()=>{if(!page)return;try{sessionStorage.setItem(`atlas:viewport:${page.id}`,JSON.stringify(viewport))}catch{}},[page?.id,viewport])
+  useEffect(()=>{const down=(event:KeyboardEvent)=>{if(event.code==='Space'&&!isTypingTarget(event.target))spacePressed.current=true},up=(event:KeyboardEvent)=>{if(event.code==='Space')spacePressed.current=false};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[])
   const selected = useMemo(() => selection && (selection.kind === 'page_block' || selection.kind === 'database_view') ? blocks.find(block => block.id === selection.id) || null : null, [blocks, selection])
   const canvasHeight = Math.max(600, Number(page?.settings?.canvasHeight || DEFAULT_CANVAS_HEIGHT))
+  const contentBounds=useMemo(()=>{const visible=blocks.filter(block=>!block.config.hidden);const right=Math.max(960,...visible.map(block=>Number(block.config.x||0)+Number(block.config.width||320)));const bottom=Math.max(canvasHeight,...visible.map(block=>Number(block.config.y||0)+Number(block.config.height||140)));return{x:0,y:0,width:right+240,height:bottom+240}},[blocks,canvasHeight])
+  const layoutLocked=Boolean(page?.settings?.layoutLocked)
 
   const savePagePatch = async (patch: Partial<Page>) => {
     if (!page) return
@@ -227,6 +237,12 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     setSelection({ kind: 'page_block', id: created.id })
   }
 
+  const changeZoom=(next:number,pointer?:{x:number;y:number})=>{const rect=viewportRef.current?.getBoundingClientRect();if(!rect)return;const focus=pointer||{x:rect.left+rect.width/2,y:rect.top+rect.height/2};setViewport(current=>zoomAt(current,next,focus,{x:rect.left,y:rect.top}))}
+  const onViewportWheel=(event:ReactWheelEvent<HTMLDivElement>)=>{if(event.ctrlKey||event.metaKey){event.preventDefault();changeZoom(viewport.zoom*Math.exp(-event.deltaY*.002),{x:event.clientX,y:event.clientY});return}event.preventDefault();setViewport(current=>({...current,panX:current.panX-event.deltaX,panY:current.panY-event.deltaY}))}
+  const panViewport=(event:ReactPointerEvent<HTMLDivElement>)=>{if(event.button!==1&&!spacePressed.current)return;event.preventDefault();const origin=viewport;beginWorkspacePointerTransaction({event,zoom:1,threshold:0,onMove:(dx,dy)=>setViewport({...origin,panX:origin.panX+dx,panY:origin.panY+dy}),onCommit:()=>{}})}
+  const fitWorkspace=()=>{const node=viewportRef.current;if(node)setViewport(fitRect(contentBounds,{width:node.clientWidth,height:node.clientHeight}))}
+  const fitSelection=()=>{const block=selected,node=viewportRef.current;if(!block||!node)return;setViewport(fitRect(blockRect(block),{width:node.clientWidth,height:node.clientHeight},100))}
+
   if (error) return <div className="atlas-error"><h2>Atlas could not open this page</h2><p>{error}</p></div>
   if (!page) return <div className="atlas-loading"><div className="spinner" /><p>Opening page…</p></div>
 
@@ -246,19 +262,24 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
       <div className="canvas-topbar-actions">
         {kind === 'record' && <button className="canvas-toolbar-button editor-back" onClick={()=>navigate(-1)}><ArrowLeft />Back</button>}
         {database && <button className="canvas-toolbar-button" onClick={()=>setDataOpen(true)}>Data</button>}
+        <button className="canvas-toolbar-button" title={layoutLocked?'Unlock layout':'Lock layout'} onClick={()=>void savePageSettings({layoutLocked:!layoutLocked})}>{layoutLocked?<Lock/>:<Unlock/>}</button>
       </div>
     </header>
 
-    <main className="canvas-stage-wrap">
-      <div className="true-canvas" style={{ height: canvasHeight }} onPointerDown={event => { if (event.currentTarget === event.target) setSelection({kind:'page',id:page.id}) }}>
-        {blocks.map(block => <CanvasBlock key={block.id} block={block} page={page} selected={selection?.id === block.id} databases={databases} record={record} fields={fields} onRecordChange={setRecord} onOpenDocument={setOpenDocumentId} onSelect={() => setSelection({kind:block.type === 'database_view'?'database_view':'page_block',id:block.id})} onSave={patch => saveBlockPatch(block.id, patch)} onDelete={() => deleteBlock(block.id)} />)}
+    <main ref={viewportRef} className="workspace-viewport" onWheel={onViewportWheel} onPointerDown={panViewport}>
+      <div className="workspace-world" style={{width:contentBounds.width,height:contentBounds.height,transform:`translate(${viewport.panX}px,${viewport.panY}px) scale(${viewport.zoom})`}}>
+       <div className="true-canvas" style={{ width:contentBounds.width,height:contentBounds.height }} onPointerDown={event => { if (event.currentTarget === event.target) setSelection({kind:'page',id:page.id}) }}>
+        {blocks.map(block => <CanvasBlock key={block.id} block={block} page={page} zoom={viewport.zoom} pageLocked={layoutLocked} selected={selection?.id === block.id} databases={databases} record={record} fields={fields} onRecordChange={setRecord} onOpenDocument={setOpenDocumentId} onSelect={() => setSelection({kind:block.type === 'database_view'?'database_view':'page_block',id:block.id})} onSave={patch => saveBlockPatch(block.id, patch)} onDelete={() => deleteBlock(block.id)} />)}
         {!blocks.length && <button className="canvas-empty-add" onClick={() => addBlock('heading')}><Plus />Add your first element</button>}
+       </div>
       </div>
     </main>
+    <div className="workspace-zoom-controls"><button onClick={()=>changeZoom(viewport.zoom-.1)} aria-label="Zoom out"><Minus/></button><details><summary>{Math.round(viewport.zoom*100)}%</summary><div>{[.25,.5,.75,.9,1,1.1,1.25,1.5,2].map(value=><button key={value} onClick={()=>changeZoom(value)}>{Math.round(value*100)}%</button>)}<button onClick={fitWorkspace}><Maximize/>Fit workspace</button>{selected&&<button onClick={fitSelection}>Fit selection</button>}<button onClick={()=>setViewport({zoom:1,panX:40,panY:40})}>Reset view</button></div></details><button onClick={()=>changeZoom(viewport.zoom+.1)} aria-label="Zoom in"><Plus/></button></div>
+    {selected&&<FloatingObjectToolbar rect={blockRect(selected)} viewport={viewport} viewportRect={viewportRef.current?.getBoundingClientRect()||null} locked={Boolean(selected.config.locked)} onDuplicate={()=>void duplicateBlock(selected.id)} onDelete={()=>!layoutLocked&&void deleteBlock(selected.id)} onLock={()=>void saveBlockPatch(selected.id,{locked:!selected.config.locked})} onMore={()=>window.dispatchEvent(new CustomEvent('atlas-open-inspector'))} onDesign={selected.type==='database_view'&&String(selected.config.mode||'gallery')==='canvas'?()=>setFocusedViewId(selected.id):undefined}/>}
 
     {host && createPortal(<EditorSidebar
       workspaceId={workspace.id} userId={user.id} page={page} blocks={blocks} selected={selected}
-      databases={databases} database={database} record={record} fields={fields}
+      databases={databases} database={database} record={record} fields={fields} layoutLocked={layoutLocked}
       onAdd={addBlock} onInsertAsset={insertAsset} onAddPageTitle={addPageTitle} onAddPageCover={addPageCover}
       onSelectBlock={id=>setSelection(id?{kind:blocks.find(block=>block.id===id)?.type==='database_view'?'database_view':'page_block',id}:null)} onSaveBlock={saveBlockPatch} onDeleteBlock={deleteBlock} onDuplicateBlock={duplicateBlock}
       onSavePage={savePagePatch} onSavePageSettings={savePageSettings} onOpenData={() => setDataOpen(true)} onRefresh={load}
@@ -266,10 +287,11 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
 
     {dataOpen && <DataDrawer database={database} record={record} databases={databases} fields={fields} onClose={() => setDataOpen(false)} onRecordChange={setRecord} onFieldsChange={setFields} />}
     {openDocumentId && <DocumentEditor id={openDocumentId} onClose={()=>setOpenDocumentId(null)} />}
+    {focusedViewId&&blocks.find(block=>block.id===focusedViewId)&&<div className="focused-card-design" role="dialog" aria-modal="true"><div className="focused-card-design-head"><div><span>CANVAS CARD</span><strong>Focused design</strong></div><button onClick={()=>setFocusedViewId(null)}><X/></button></div><div className="focused-card-design-stage"><DatabaseCanvasView blockId={focusedViewId} config={blocks.find(block=>block.id===focusedViewId)!.config} editing databases={databases} save={patch=>saveBlockPatch(focusedViewId,patch)}/></div></div>}
   </div>
 }
 
-function CanvasBlock({ block, page, selected, databases, record, fields, onRecordChange, onOpenDocument, onSelect, onSave, onDelete }: { block: PageBlock; page: Page; selected: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; onSelect: () => void; onSave: (patch: BlockPatch) => void; onDelete: () => void }) {
+function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, record, fields, onRecordChange, onOpenDocument, onSelect, onSave }: { block: PageBlock; page: Page; zoom:number; pageLocked:boolean; selected: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; onSelect: () => void; onSave: (patch: BlockPatch) => void; onDelete: () => void }) {
   const [config, setConfig] = useState<BlockPatch>(block.config)
   useEffect(() => setConfig(block.config), [block.config])
 
@@ -277,30 +299,8 @@ function CanvasBlock({ block, page, selected, databases, record, fields, onRecor
   const hidden = Boolean(config.hidden)
   const commit = (patch: BlockPatch) => { const next = { ...config, ...patch }; setConfig(next); onSave(patch) }
 
-  const drag = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (locked) return
-    event.preventDefault()
-    onSelect()
-    const startX = event.clientX, startY = event.clientY, originX = Number(config.x || 0), originY = Number(config.y || 0), target = event.currentTarget
-    target.setPointerCapture(event.pointerId)
-    const move = (e: PointerEvent) => setConfig(current => ({ ...current, x: Math.max(0, originX + e.clientX - startX), y: Math.max(0, originY + e.clientY - startY) }))
-    const up = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up); setConfig(current => { onSave({ x: current.x, y: current.y }); return current }) }
-    target.addEventListener('pointermove', move)
-    target.addEventListener('pointerup', up)
-  }
-
-  const resize = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (locked) return
-    event.preventDefault()
-    event.stopPropagation()
-    onSelect()
-    const startX = event.clientX, startY = event.clientY, originW = Number(config.width || 320), originH = Number(config.height || 140), target = event.currentTarget
-    target.setPointerCapture(event.pointerId)
-    const move = (e: PointerEvent) => setConfig(current => ({ ...current, width: Math.max(70, originW + e.clientX - startX), height: Math.max(35, originH + e.clientY - startY) }))
-    const up = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', up); setConfig(current => { onSave({ width: current.width, height: current.height }); return current }) }
-    target.addEventListener('pointermove', move)
-    target.addEventListener('pointerup', up)
-  }
+  const drag = (event: ReactPointerEvent<HTMLElement>) => {if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin={x:Number(config.x||0),y:Number(config.y||0)};beginWorkspacePointerTransaction({event,zoom,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,x:Math.max(0,origin.x+dx),y:Math.max(0,origin.y+dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y});return current})})}
+  const resize = (edge:ResizeEdge)=>(event:ReactPointerEvent<HTMLElement>)=>{if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin=blockRect({...block,config});beginWorkspacePointerTransaction({event,zoom,threshold:0,onStart:onSelect,onMove:(dx,dy)=>setConfig(current=>({...current,...resizeRect(origin,edge,dx,dy)})),onCommit:()=>setConfig(current=>{onSave({x:current.x,y:current.y,width:current.width,height:current.height});return current})})}
 
   if (hidden) return null
 
@@ -314,15 +314,13 @@ function CanvasBlock({ block, page, selected, databases, record, fields, onRecor
     opacity: hidden ? 0.3 : 1,
   }
 
-  return <div className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} type-${block.type}`} style={style}>
-    <button className="canvas-object-handle" aria-label={`Select and move ${block.type.replace('_',' ')}`} onClick={event=>{event.stopPropagation();onSelect()}} onPointerDown={drag}><Grip /></button>
-    {selected && <button className="canvas-delete-cue" onClick={event => { event.stopPropagation(); void onDelete() }}><Trash2 /></button>}
-    <BlockContent block={block} page={page} config={config} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
-    {selected && !locked && <button className="resize-handle" onPointerDown={resize} aria-label="Resize" />}
+  return <div className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(event.target===event.currentTarget){onSelect();drag(event)}}}>
+    {selected&&!locked&&!pageLocked&&<><button className="object-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>{(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
+    <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
 }
 
-function BlockContent({ block, page, config, manipulating, databases, record, fields, onRecordChange, onOpenDocument, save }: { block: PageBlock; page: Page; config: BlockPatch; manipulating: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; save: (patch: BlockPatch) => void }) {
+function BlockContent({ block, page, config, zoom, manipulating, databases, record, fields, onRecordChange, onOpenDocument, save }: { block: PageBlock; page: Page; config: BlockPatch; zoom:number; manipulating: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; save: (patch: BlockPatch) => void }) {
   const binding = String(config.systemBinding || '')
   if (block.type === 'heading' || block.type === 'text' || block.type === 'callout') {
     const Tag = block.type === 'heading' ? 'h2' : 'div'
@@ -338,7 +336,7 @@ function BlockContent({ block, page, config, manipulating, databases, record, fi
   if (block.type === 'file') return <a className="canvas-file" href={String(config.url||'#')} target="_blank" rel="noreferrer"><span>FILE</span><strong>{String(config.title||'Attachment')}</strong><small>{String(config.mimeType||'Open or download')}</small></a>
   if (block.type === 'button') return <a className="canvas-action-button" href={String(config.url || '#')}>{String(config.label || 'Button')}</a>
   if (block.type === 'divider') return <div className="canvas-divider" />
-  if (block.type === 'database_view') return <DatabaseCanvasView blockId={block.id} config={config} editing={manipulating} databases={databases} save={save} />
+  if (block.type === 'database_view') return <DatabaseCanvasView blockId={block.id} config={config} editing={manipulating} zoom={zoom} databases={databases} save={save} />
   if (block.type === 'property') return <PropertyDisplay config={config} record={record} fields={fields} onRecordChange={onRecordChange} />
   if (block.type === 'metric') return <MetricDisplay config={config} />
   if (block.type === 'progress') return <ProgressDisplay config={config} record={record} fields={fields} />
@@ -413,3 +411,5 @@ function DataDrawer({ database, record, databases, fields, onClose, onRecordChan
 }
 
 const fieldTypes: FieldType[] = ['text', 'long_text', 'number', 'date', 'checkbox', 'select', 'multi_select', 'url', 'image', 'relation']
+function blockRect(block:PageBlock):WorldRect{return{x:Number(block.config.x||0),y:Number(block.config.y||0),width:Number(block.config.width||320),height:Number(block.config.height||140)}}
+function isTypingTarget(target:EventTarget|null){const element=target as HTMLElement|null;return Boolean(element?.isContentEditable||element?.matches('input,textarea,select'))}

@@ -5,7 +5,7 @@ import CanvasCardView, { ensureCanvasCardTemplate, type CanvasCardRecordLayout }
 import { createRecord, getFields, getRecords, updateRecord } from '../lib/data'
 import type { Database as DatabaseType, Field, RecordRow } from '../types'
 
-type Props={blockId:string;config:Record<string,unknown>;editing:boolean;databases:DatabaseType[];save:(patch:Record<string,unknown>)=>void}
+type Props={blockId:string;config:Record<string,unknown>;editing:boolean;zoom?:number;databases:DatabaseType[];save:(patch:Record<string,unknown>)=>void}
 type Mode='gallery'|'list'|'rail'|'board'|'table'|'canvas'
 
 export default function DatabaseCanvasViewNext(props:Props){
@@ -15,7 +15,7 @@ export default function DatabaseCanvasViewNext(props:Props){
  </div>
 }
 
-function CanvasMode({config,editing,save}:Props){
+function CanvasMode({config,editing,zoom=1,save}:Props){
  const databaseId=String(config.databaseId||'')
  const[records,setRecords]=useState<RecordRow[]>([])
  const[fields,setFields]=useState<Field[]>([])
@@ -31,7 +31,7 @@ function CanvasMode({config,editing,save}:Props){
  const createHere=async()=>{if(!databaseId||creating)return;setCreating(true);try{await createRecord(databaseId,'Untitled');await reload()}finally{setCreating(false)}}
  const saveLayout=(recordId:string,next:CanvasCardRecordLayout)=>save({canvasCardRecordLayouts:{...layouts,[recordId]:next},canvasCardSelectedRecordId:recordId})
  return <div className="db-canvas-mode">
-  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Use this view's object handle, then choose a collection in the inspector.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing onPatchField={patchRecord} showCreate onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})} recordLayouts={layouts} onChangeRecordLayout={saveLayout} selectedRecordId={String(config.canvasCardSelectedRecordId||'')} onSelectRecord={id=>save({canvasCardSelectedRecordId:id})}/>}
+  {!databaseId?<div className="canvas-data-empty"><Database/><strong>Connect a database</strong><span>Use this view's object handle, then choose a collection in the inspector.</span></div>:<CanvasCardView records={shown} fields={usableFields} databaseId={databaseId} editing={editing} viewportZoom={zoom} template={template} onChangeTemplate={next=>save({canvasCardTemplate:next})} inlineEditing onPatchField={patchRecord} showCreate onCreate={()=>void createHere()} selectedElementId={String(config.canvasCardSelectedElementId||'__card__')} onSelectElement={id=>save({canvasCardSelectedElementId:id})} recordLayouts={layouts} onChangeRecordLayout={saveLayout} selectedRecordId={String(config.canvasCardSelectedRecordId||'')} onSelectRecord={id=>save({canvasCardSelectedRecordId:id})}/>}
  </div>
 }
 
