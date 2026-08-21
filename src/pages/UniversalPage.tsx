@@ -204,6 +204,19 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     setBlocks(items => [...items, created]); setSelection({ kind: 'page_block', id: created.id })
   }
 
+  const insertAsset = async (asset: AtlasAsset) => {
+    if (!page || asset.kind === 'font' || asset.kind === 'emoji') return
+    const type: PageBlockType = asset.kind === 'audio' ? 'audio' : asset.kind === 'file' ? 'file' : 'image'
+    const created = await createPageBlock(page.id, type, blocks.length, {
+      assetId: asset.id, url: asset.public_url || '', title: asset.name, mimeType: asset.mime_type,
+      x: 70 + (blocks.length % 7) * 24, y: 110 + (blocks.length % 7) * 24,
+      width: type === 'audio' ? 420 : type === 'file' ? 360 : 360, height: type === 'image' ? 280 : type === 'audio' ? 130 : 110,
+      zIndex: Math.max(1, ...blocks.map(block => Number(block.config?.zIndex || 1))) + 1,
+      background: type === 'image' ? 'transparent' : '#fffdfa', radius: 16, padding: type === 'image' ? 0 : 18, fit: 'cover',
+    })
+    setBlocks(items => [...items, created]); setSelectedId(created.id)
+  }
+
   const addPageTitle = async () => {
     if (!page) return
     const created = await createPageBlock(page.id, 'heading', blocks.length, {
