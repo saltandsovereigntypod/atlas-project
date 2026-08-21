@@ -14,7 +14,7 @@ import type { AtlasAsset } from '../lib/assets'
 import type { Database as DatabaseType, Field, FieldType, Page, PageBlock, PageBlockType, RecordRow, WorkspaceSelection } from '../types'
 import FloatingObjectToolbar from '../components/FloatingObjectToolbar'
 import PageCustomization from '../components/PageCustomization'
-import { beginWorkspacePointerTransaction, fitRect, pointerOwner, resizeRect, zoomAt, type ResizeEdge, type WorkspaceViewportState, type WorldRect } from '../lib/workspaceViewport'
+import { beginWorkspacePointerTransaction, fitRect, panViewportByWheel, pointerOwner, resizeRect, zoomAt, type ResizeEdge, type WorkspaceViewportState, type WorldRect } from '../lib/workspaceViewport'
 
 type Kind = 'home' | 'page' | 'database' | 'record'
 type BlockPatch = Record<string, unknown>
@@ -107,7 +107,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   useEffect(() => { void load() }, [workspace.id, kind, params.pageId, params.databaseId, params.recordId])
   useEffect(()=>{if(!page)return;try{const saved=sessionStorage.getItem(`atlas:viewport:${page.id}`);setViewport(saved?JSON.parse(saved):{zoom:1,panX:40,panY:40})}catch{setViewport({zoom:1,panX:40,panY:40})}},[page?.id])
   useEffect(()=>{if(!page)return;try{sessionStorage.setItem(`atlas:viewport:${page.id}`,JSON.stringify(viewport))}catch{}},[page?.id,viewport])
-  useEffect(()=>{const node=viewportRef.current;if(!node||!page)return;const wheel=(event:WheelEvent)=>{event.preventDefault();const rect=node.getBoundingClientRect();if(event.ctrlKey||event.metaKey){setViewport(current=>zoomAt(current,current.zoom*Math.exp(-event.deltaY*.002),{x:event.clientX,y:event.clientY},{x:rect.left,y:rect.top}));return}setViewport(current=>({...current,panX:current.panX-event.deltaX,panY:current.panY-event.deltaY}))};node.addEventListener('wheel',wheel,{passive:false});return()=>node.removeEventListener('wheel',wheel)},[page?.id])
+  useEffect(()=>{const node=viewportRef.current;if(!node||!page)return;const wheel=(event:WheelEvent)=>{event.preventDefault();const rect=node.getBoundingClientRect();if(event.ctrlKey||event.metaKey){setViewport(current=>zoomAt(current,current.zoom*Math.exp(-event.deltaY*.002),{x:event.clientX,y:event.clientY},{x:rect.left,y:rect.top}));return}const visible=blocks.filter(block=>!block.config.hidden);const wheelBounds:WorldRect=visible.length?(()=>{const left=Math.min(...visible.map(block=>Number(block.config.x||0))),top=Math.min(...visible.map(block=>Number(block.config.y||0))),right=Math.max(...visible.map(block=>Number(block.config.x||0)+Number(block.config.width||320))),bottom=Math.max(...visible.map(block=>Number(block.config.y||0)+Number(block.config.height||140)));return{x:left,y:top,width:Math.max(1,right-left),height:Math.max(1,bottom-top)}})():{x:0,y:0,width:Math.max(1,node.clientWidth),height:Math.max(1,node.clientHeight)};setViewport(current=>panViewportByWheel(current,{x:event.deltaX,y:event.deltaY},wheelBounds,{width:node.clientWidth,height:node.clientHeight},120))};node.addEventListener('wheel',wheel,{passive:false});return()=>node.removeEventListener('wheel',wheel)},[page?.id,blocks])
   useEffect(()=>{const down=(event:KeyboardEvent)=>{if(event.code==='Space'&&!isTypingTarget(event.target))spacePressed.current=true},up=(event:KeyboardEvent)=>{if(event.code==='Space')spacePressed.current=false};window.addEventListener('keydown',down);window.addEventListener('keyup',up);return()=>{window.removeEventListener('keydown',down);window.removeEventListener('keyup',up)}},[])
   const selected = useMemo(() => selection && (selection.kind === 'page_block' || selection.kind === 'database_view') ? blocks.find(block => block.id === selection.id) || null : null, [blocks, selection])
   const canvasHeight = Math.max(600, Number(page?.settings?.canvasHeight || DEFAULT_CANVAS_HEIGHT))
@@ -248,7 +248,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   if (error) return <div className="atlas-error"><h2>Atlas could not open this page</h2><p>{error}</p></div>
   if (!page) return <div className="atlas-loading"><div className="spinner" /><p>Opening page…</p></div>
 
-  const host = typeof document !== 'undefined' ? document.getElementById('atlas-editor-sidebar-host') : null
+  const overlayHost = typeof document !== 'undefined' ? document.body : null
   const pageStyle: CSSProperties = {
     backgroundColor: String(page.settings?.background || '#fbfaf7'),
     color: String(page.settings?.textColor || '#211e1a'),
@@ -279,15 +279,15 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
       </div>
     </main>
     <div className="workspace-zoom-controls"><button onClick={()=>changeZoom(viewport.zoom-.1)} aria-label="Zoom out"><Minus/></button><details><summary>{Math.round(viewport.zoom*100)}%</summary><div>{[.25,.5,.75,.9,1,1.1,1.25,1.5,2].map(value=><button key={value} onClick={()=>changeZoom(value)}>{Math.round(value*100)}%</button>)}<button onClick={fitWorkspace}><Maximize/>Fit workspace</button>{selected&&<button onClick={fitSelection}>Fit selection</button>}<button onClick={()=>setViewport({zoom:1,panX:40,panY:40})}>Reset view</button></div></details><button onClick={()=>changeZoom(viewport.zoom+.1)} aria-label="Zoom in"><Plus/></button></div>
-    {selected&&<FloatingObjectToolbar rect={blockRect(selected)} viewport={viewport} viewportRect={viewportRef.current?.getBoundingClientRect()||null} locked={Boolean(selected.config.locked)} onDuplicate={()=>void duplicateBlock(selected.id)} onLock={()=>void saveBlockPatch(selected.id,{locked:!selected.config.locked})} onMore={()=>setInspectorOpen(true)} onDesign={selected.type==='database_view'&&String(selected.config.mode||'gallery')==='canvas'?()=>setFocusedViewId(selected.id):undefined}/>}
+    {selected&&<FloatingObjectToolbar rect={blockRect(selected)} viewport={viewport} viewportRect={viewportRef.current?.getBoundingClientRect()||null} locked={Boolean(selected.config.locked)} onDuplicate={()=>void duplicateBlock(selected.id)} onLock={()=>void saveBlockPatch(selected.id,{locked:!selected.config.locked})} onMore={()=>{setPageCustomizationOpen(false);setInspectorOpen(true)}} onDesign={selected.type==='database_view'&&String(selected.config.mode||'gallery')==='canvas'?()=>setFocusedViewId(selected.id):undefined}/>}
 
-    {host && createPortal(<EditorSidebar
+    {overlayHost && createPortal(<EditorSidebar
       workspaceId={workspace.id} userId={user.id} page={page} blocks={blocks} selected={selected}
       databases={databases} database={database} record={record} fields={fields} layoutLocked={layoutLocked}
       onAdd={addBlock} onInsertAsset={insertAsset} onAddPageTitle={addPageTitle} onAddPageCover={addPageCover}
       onSelectBlock={id=>setSelection(id?{kind:blocks.find(block=>block.id===id)?.type==='database_view'?'database_view':'page_block',id}:null)} onSaveBlock={saveBlockPatch} onDeleteBlock={deleteBlock} onDuplicateBlock={duplicateBlock}
       inspectorOpen={inspectorOpen} onCloseInspector={()=>setInspectorOpen(false)} onSavePage={savePagePatch} onSavePageSettings={savePageSettings} onOpenData={() => setDataOpen(true)} onRefresh={load}
-    />, host)}
+    />, overlayHost)}
     <button className="page-customization-button" onPointerDown={event=>event.stopPropagation()} onClick={()=>setPageCustomizationOpen(value=>!value)}><Palette/>Page</button>
     {pageCustomizationOpen&&<PageCustomization page={page} blocks={blocks} databases={databases} database={database} onSaveSettings={savePageSettings} onRefresh={load} onClose={()=>setPageCustomizationOpen(false)}/>}
 
