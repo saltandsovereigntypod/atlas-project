@@ -28,7 +28,6 @@ export default function FloatingObjectToolbar({rect,viewport,viewportRect,locked
     {menuOpen&&<div className="workspace-object-menu" role="menu">
       <button type="button" role="menuitem" onClick={action(onDuplicate)}><Copy/>Duplicate</button>
       {onDesign&&<button type="button" role="menuitem" onClick={action(onDesign)}><Palette/>Design card</button>}
-      <button type="button" role="menuitem" onClick={action(onMore)}><SlidersHorizontal/>Open inspector</button>
     </div>}
   </div>
 }
