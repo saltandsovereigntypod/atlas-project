@@ -6,14 +6,11 @@
   padding: 0 !important;
 }
 
-/* Radius is synchronized by editorRuntimeEnhancements so both newer blocks that
-   use the main Radius control and older widgets that still carry widgetRadius
-   keep their visible rounded corners. Do not force inherit here, because that
-   erases an older widget's own saved radius when the outer frame radius is 0. */
+/* The main inspector's corner radius is the source of truth for the visible
+   widget shell. editorRuntimeEnhancements mirrors the frame radius to the shell. */
 
 /* Widget internals share a common set of Canva-style color channels. These are
-   stored on the block and already exposed as CSS variables by UniversalPage,
-   so the same controls work across every widget without widget-specific forms. */
+   stored on the block and exposed as CSS variables by UniversalPage. */
 .canvas-element.type-widget .atlas-widget-shell input:not([type="checkbox"]):not([type="radio"]),
 .canvas-element.type-widget .atlas-widget-shell textarea,
 .canvas-element.type-widget .atlas-widget-shell select {
@@ -37,8 +34,8 @@
   stroke: var(--atlas-divider-color, currentColor) !important;
 }
 
-/* Native browser checkboxes are replaced with a deliberately simple Atlas
-   checkbox so fill, border, and checkmark can each be themed independently. */
+/* Native browser checkboxes are replaced with an Atlas checkbox so the visible
+   box fill, border and checkmark respond to their inspector color channels. */
 .canvas-element.type-widget .atlas-widget-shell input[type="checkbox"] {
   -webkit-appearance:none;
   appearance:none;
@@ -50,7 +47,7 @@
   place-content:center;
   border:1.5px solid var(--widget-secondary, #8a8178) !important;
   border-radius:3px;
-  background:#ffffff;
+  background:var(--widget-accent, #ffffff) !important;
   cursor:pointer;
   transition:background .12s,border-color .12s,box-shadow .12s;
 }
