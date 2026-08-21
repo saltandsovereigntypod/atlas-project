@@ -6,9 +6,11 @@ import { useAppContext } from '../App'
 import AtlasWidget from '../components/AtlasWidget'
 import DatabaseCanvasView from '../components/DatabaseCanvasView'
 import EditorSidebar from '../components/EditorSidebar'
+import DocumentEditor from '../components/DocumentEditor'
 import FieldInput from '../components/FieldInput'
-import { createField, createPageBlock, createRecord, deleteField, deletePageBlock, deleteRecord, getDatabase, getDatabases, getFields, getOrCreateContextPage, getPage, getPageBlocks, getRecord, getRecords, updateField, updatePage, updatePageBlock, updateRecord } from '../lib/data'
+import { createDocument, createField, createPageBlock, createRecord, deleteField, deletePageBlock, deleteRecord, getDatabase, getDatabases, getDocument, getFields, getOrCreateContextPage, getPage, getPageBlocks, getRecord, getRecords, updateField, updatePage, updatePageBlock, updateRecord } from '../lib/data'
 import { displayValue } from '../lib/value'
+import type { AtlasAsset } from '../lib/assets'
 import type { Database as DatabaseType, Field, FieldType, Page, PageBlock, PageBlockType, RecordRow } from '../types'
 
 type Kind = 'home' | 'page' | 'database' | 'record'
@@ -48,6 +50,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
   const [editorStack, setEditorStack] = useState<string[]>(() => readEditorStack())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [dataOpen, setDataOpen] = useState(false)
+  const [openDocumentId, setOpenDocumentId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const load = async () => {
@@ -243,6 +246,9 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     if (type === 'text') config = { ...config, text: 'Start writing…', fontSize: 17, fontWeight: 400, fontFamily: 'Georgia, serif', lineHeight: 1.5, letterSpacing: 0, textAlign: 'left' }
     if (type === 'callout') config = { ...config, text: 'Add a note…', background: '#f0ebe3', padding: 18, radius: 14, fontSize: 17, fontFamily: 'Georgia, serif' }
     if (type === 'image') config = { ...config, url: '', fit: 'cover', radius: 14 }
+    if (type === 'document') { const doc = await createDocument(workspace.id, user.id, 'Untitled document', page.id); config = { ...config, documentId: doc.id, width: 360, height: 170, background: '#fffdfa', radius: 16, padding: 20 } }
+    if (type === 'audio') config = { ...config, title: 'Audio', width: 420, height: 130, background: '#fffdfa', radius: 16, padding: 18 }
+    if (type === 'file') config = { ...config, title: 'Attachment', width: 360, height: 110, background: '#fffdfa', radius: 14, padding: 18 }
     if (type === 'button') config = { ...config, label: 'Button', url: '', background: '#24211d', textColor: '#ffffff', width: 180, height: 60, radius: 12 }
     if (type === 'database_view') config = { ...config, databaseId: database?.id || databases[0]?.id || '', mode: 'gallery', recordLayoutMode: 'auto', title: '', limit: 12, padding: 0 }
     if (type === 'property') config = { ...config, fieldId: '__title__', label: '', display: 'default' }
@@ -254,6 +260,19 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     const created = await createPageBlock(page.id, type, blocks.length, config)
     setBlocks(items => [...items, created])
     setSelectedId(created.id)
+  }
+
+  const insertAsset = async (asset: AtlasAsset) => {
+    if (!page || asset.kind === 'font' || asset.kind === 'emoji') return
+    const type: PageBlockType = asset.kind === 'audio' ? 'audio' : asset.kind === 'file' ? 'file' : 'image'
+    const created = await createPageBlock(page.id, type, blocks.length, {
+      assetId: asset.id, url: asset.public_url || '', title: asset.name, mimeType: asset.mime_type,
+      x: 70 + (blocks.length % 7) * 24, y: 110 + (blocks.length % 7) * 24,
+      width: type === 'audio' ? 420 : type === 'file' ? 360 : 360, height: type === 'image' ? 280 : type === 'audio' ? 130 : 110,
+      zIndex: Math.max(1, ...blocks.map(block => Number(block.config?.zIndex || 1))) + 1,
+      background: type === 'image' ? 'transparent' : '#fffdfa', radius: 16, padding: type === 'image' ? 0 : 18, fit: 'cover',
+    })
+    setBlocks(items => [...items, created]); setSelectedId(created.id)
   }
 
   const addPageTitle = async () => {
@@ -303,7 +322,7 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
 
     <main className="canvas-stage-wrap">
       <div className="true-canvas" style={{ height: canvasHeight }} onPointerDown={event => { if (event.currentTarget === event.target) setSelectedId(null) }}>
-        {blocks.map(block => <CanvasBlock key={block.id} block={block} page={page} editing={editing} selected={selectedId === block.id} databases={databases} record={record} fields={fields} onSelect={() => setSelectedId(block.id)} onSave={patch => saveBlockPatch(block.id, patch)} onDelete={() => deleteBlock(block.id)} />)}
+        {blocks.map(block => <CanvasBlock key={block.id} block={block} page={page} editing={editing} selected={selectedId === block.id} databases={databases} record={record} fields={fields} onOpenDocument={setOpenDocumentId} onSelect={() => setSelectedId(block.id)} onSave={patch => saveBlockPatch(block.id, patch)} onDelete={() => deleteBlock(block.id)} />)}
         {!blocks.length && !editing && <div className="canvas-empty-view"><span>This page is yours.</span><small>Click Edit to start creating.</small></div>}
         {!blocks.length && editing && <button className="canvas-empty-add" onClick={() => addBlock('heading')}><Plus />Add your first element</button>}
       </div>
@@ -312,17 +331,18 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
     {editing && host && createPortal(<EditorSidebar
       workspaceId={workspace.id} userId={user.id} page={page} blocks={blocks} selected={selected}
       databases={databases} database={database} record={record} fields={fields}
-      onAdd={addBlock} onAddPageTitle={addPageTitle} onAddPageCover={addPageCover}
+      onAdd={addBlock} onInsertAsset={insertAsset} onAddPageTitle={addPageTitle} onAddPageCover={addPageCover}
       onSelectBlock={setSelectedId} onSaveBlock={saveBlockPatch} onDeleteBlock={deleteBlock} onDuplicateBlock={duplicateBlock}
       onSavePage={savePagePatch} onSavePageSettings={savePageSettings} onOpenData={() => setDataOpen(true)}
       onDone={leaveEditing}
     />, host)}
 
     {dataOpen && <DataDrawer database={database} record={record} databases={databases} fields={fields} onClose={() => setDataOpen(false)} onRecordChange={setRecord} onFieldsChange={setFields} />}
+    {openDocumentId && <DocumentEditor id={openDocumentId} onClose={()=>setOpenDocumentId(null)} />}
   </div>
 }
 
-function CanvasBlock({ block, page, editing, selected, databases, record, fields, onSelect, onSave, onDelete }: { block: PageBlock; page: Page; editing: boolean; selected: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onSelect: () => void; onSave: (patch: BlockPatch) => void; onDelete: () => void }) {
+function CanvasBlock({ block, page, editing, selected, databases, record, fields, onOpenDocument, onSelect, onSave, onDelete }: { block: PageBlock; page: Page; editing: boolean; selected: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onOpenDocument:(id:string)=>void; onSelect: () => void; onSave: (patch: BlockPatch) => void; onDelete: () => void }) {
   const [config, setConfig] = useState<BlockPatch>(block.config)
   useEffect(() => setConfig(block.config), [block.config])
 
@@ -369,12 +389,12 @@ function CanvasBlock({ block, page, editing, selected, databases, record, fields
 
   return <div className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${hidden ? 'is-hidden' : ''} type-${block.type}`} style={style} onPointerDown={drag} onClick={event => { if (editing) { event.stopPropagation(); onSelect() } }}>
     {editing && selected && <><div className="canvas-drag-cue"><Layers /></div><button className="canvas-delete-cue" onClick={event => { event.stopPropagation(); void onDelete() }}><Trash2 /></button></>}
-    <BlockContent block={block} page={page} config={config} editing={editing && !locked} databases={databases} record={record} fields={fields} save={commit} />
+    <BlockContent block={block} page={page} config={config} editing={editing && !locked} databases={databases} record={record} fields={fields} onOpenDocument={onOpenDocument} save={commit} />
     {editing && selected && !locked && <button className="resize-handle" onPointerDown={resize} aria-label="Resize" />}
   </div>
 }
 
-function BlockContent({ block, page, config, editing, databases, record, fields, save }: { block: PageBlock; page: Page; config: BlockPatch; editing: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; save: (patch: BlockPatch) => void }) {
+function BlockContent({ block, page, config, editing, databases, record, fields, onOpenDocument, save }: { block: PageBlock; page: Page; config: BlockPatch; editing: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onOpenDocument:(id:string)=>void; save: (patch: BlockPatch) => void }) {
   const binding = String(config.systemBinding || '')
   if (block.type === 'heading' || block.type === 'text' || block.type === 'callout') {
     const Tag = block.type === 'heading' ? 'h2' : 'div'
@@ -385,6 +405,9 @@ function BlockContent({ block, page, config, editing, databases, record, fields,
     const url = binding === 'page_cover' ? page.cover : String(config.url || '')
     return url ? <img className="canvas-image" src={url} alt="" style={{ objectFit: String(config.fit || 'cover') as CSSProperties['objectFit'] }} /> : <div className="canvas-image-placeholder"><span>Add an image from the Assets panel</span></div>
   }
+  if (block.type === 'document') return <DocumentCard id={String(config.documentId||'')} onOpen={onOpenDocument}/>
+  if (block.type === 'audio') return <div className="canvas-audio"><span>AUDIO</span><strong>{String(config.title||'Audio')}</strong>{config.url?<audio controls src={String(config.url)}/>:<small>Choose audio from Assets</small>}</div>
+  if (block.type === 'file') return <a className="canvas-file" href={String(config.url||'#')} target="_blank" rel="noreferrer"><span>FILE</span><strong>{String(config.title||'Attachment')}</strong><small>{String(config.mimeType||'Open or download')}</small></a>
   if (block.type === 'button') return <a className="canvas-action-button" href={editing ? undefined : String(config.url || '#')} onClick={editing ? event => event.preventDefault() : undefined}>{String(config.label || 'Button')}</a>
   if (block.type === 'divider') return <div className="canvas-divider" />
   if (block.type === 'database_view') return <DatabaseCanvasView blockId={block.id} config={config} editing={editing} databases={databases} save={save} />
@@ -395,6 +418,8 @@ function BlockContent({ block, page, config, editing, databases, record, fields,
   if (block.type === 'widget') return <AtlasWidget config={config} editing={editing} databases={databases} save={save} />
   return null
 }
+
+function DocumentCard({id,onOpen}:{id:string;onOpen:(id:string)=>void}){const[doc,setDoc]=useState<Awaited<ReturnType<typeof getDocument>>|null>(null);useEffect(()=>{if(id)getDocument(id).then(setDoc).catch(console.error)},[id]);const text=(doc?.body||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();const words=text?text.split(' ').length:0;return <button className="canvas-document" onClick={e=>{e.stopPropagation();onOpen(id)}}><span>DOCUMENT</span><strong>{doc?.title||'Opening document…'}</strong><p>{text||'A focused space for notes and writing.'}</p><small>{words} words · {doc?new Date(doc.updated_at).toLocaleDateString():''}</small></button>}
 
 function PropertyDisplay({ config, record, fields }: { config: BlockPatch; record: RecordRow | null; fields: Field[] }) {
   if (!record) return <div className="canvas-data-empty">This element needs a record page.</div>
