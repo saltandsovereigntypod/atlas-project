@@ -19,4 +19,19 @@ export function installEditorRuntimeEnhancements(){
  window.addEventListener('pointerup',stop,true)
  window.addEventListener('pointercancel',stop,true)
  window.addEventListener('blur',stop)
+
+ const syncWidgetRadii=()=>{
+  document.querySelectorAll<HTMLElement>('.canvas-element.type-widget').forEach(frame=>{
+   const shell=frame.querySelector<HTMLElement>(':scope > .atlas-widget-shell')
+   if(!shell)return
+   if(shell.dataset.atlasOriginalRadius===undefined)shell.dataset.atlasOriginalRadius=shell.style.borderRadius||''
+   const frameRadius=getComputedStyle(frame).borderTopLeftRadius
+   const hasFrameRadius=frameRadius&&frameRadius!=='0px'
+   const desired=hasFrameRadius?frameRadius:(shell.dataset.atlasOriginalRadius||'0px')
+   if(shell.style.getPropertyValue('border-radius')!==desired||shell.style.getPropertyPriority('border-radius')!=='important')shell.style.setProperty('border-radius',desired,'important')
+  })
+ }
+ syncWidgetRadii()
+ const observer=new MutationObserver(()=>syncWidgetRadii())
+ observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']})
 }
