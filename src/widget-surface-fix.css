@@ -246,3 +246,24 @@
   width: 16px;
   height: 16px;
 }
+
+.canvas-element.selected .object-drag-chip {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  transform: translateX(-50%);
+  z-index: 630;
+  height: 26px;
+  min-width: 52px;
+  border: 1px solid #d8cec2;
+  border-radius: 999px;
+  background: rgba(255,253,249,.96);
+  color: #4f473f;
+  box-shadow: 0 8px 22px rgba(35,28,22,.14);
+  cursor: grab;
+  font: 700 11px/1 system-ui, sans-serif;
+}
+
+.canvas-element.selected .object-drag-chip:active {
+  cursor: grabbing;
+}
