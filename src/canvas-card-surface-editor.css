@@ -12,6 +12,8 @@
 .canvas-card-design-popover{position:sticky;left:14px;bottom:14px;z-index:80;width:min(560px,calc(100% - 28px));margin-top:-2px;padding:9px;border:1px solid rgba(45,38,32,.16);border-radius:10px;background:rgba(255,253,249,.96);box-shadow:0 16px 44px rgba(42,33,25,.16);backdrop-filter:blur(12px);display:grid;gap:8px}
 .db-master-canvas.is-designing .canvas-card-design-popover{position:fixed;top:88px;right:18px;bottom:18px;left:auto;width:min(420px,calc(100vw - 36px));margin:0;padding:0;grid-auto-rows:max-content;overflow:auto;border-radius:14px;z-index:1200}
 .db-master-canvas.is-designing .db-master-canvas-stage{padding-right:450px}
+.db-master-canvas.direct-edit .canvas-card-design-popover{position:fixed;top:auto;right:18px;bottom:18px;left:auto;width:min(430px,calc(100vw - 36px));max-height:min(68vh,720px);margin:0;padding:0;grid-auto-rows:max-content;overflow:auto;border-radius:14px;z-index:1200}
+.db-master-canvas.direct-edit .db-master-canvas-stage{padding-right:18px;padding-bottom:112px;background:#fbf8f2}
 .canvas-card-panel-header{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 15px;border-bottom:1px solid #ece5dd;background:#fffdfa;border-radius:14px 14px 0 0}
 .canvas-card-panel-header>div{display:grid;gap:2px;min-width:0}
 .canvas-card-panel-header span,.canvas-card-panel-section>span{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#8a7c70}
@@ -57,5 +59,6 @@
 .db-master-canvas-body{grid-template-columns:minmax(0,1fr)!important}
 .db-master-canvas-stage{padding:18px;min-height:520px}
 .db-master-canvas.is-designing .db-master-canvas-stage{background:#fbf8f2}
+@media(max-width:1100px){.db-master-canvas.direct-edit .canvas-card-design-popover{position:relative;inset:auto;width:100%;max-height:none;margin-top:10px}.db-master-canvas.direct-edit .db-master-canvas-stage{padding-right:18px;padding-bottom:18px}}
 @media(max-width:1100px){.db-master-canvas.is-designing .canvas-card-design-popover{position:relative;inset:auto;width:100%;margin-top:10px}.db-master-canvas.is-designing .db-master-canvas-stage{padding-right:18px}}
 @media(max-width:900px){.canvas-card-control-grid,.canvas-card-control-grid.object{grid-template-columns:1fr}.canvas-card-design-popover{position:relative;left:auto;bottom:auto;width:100%;margin-top:8px}.canvas-card-popover-head{flex-wrap:wrap}}
