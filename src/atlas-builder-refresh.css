@@ -1,1 +1,26 @@
 .canvas-box-surface,.canvas-shape-surface{width:100%;height:100%;pointer-events:none}.canvas-shape-surface.shape-circle{border-radius:999px}.canvas-element.type-section .canvas-block-content,.canvas-element.type-shape .canvas-block-content{width:100%;height:100%}.document-card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.document-card-tags i{font-style:normal;font:600 10px/1.2 Arial,sans-serif;padding:4px 7px;border:1px solid currentColor;border-radius:999px;opacity:.72}.document-card-full{display:-webkit-box;-webkit-line-clamp:8;-webkit-box-orient:vertical;overflow:hidden}.db-master-canvas{min-height:520px}.db-master-canvas-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 22px;border-bottom:1px solid #e7e0d7}.db-master-canvas-toolbar div{display:flex;flex-direction:column;gap:3px}.db-master-canvas-toolbar span{font-size:12px;opacity:.62}.db-master-canvas-toolbar button{display:flex;align-items:center;gap:7px;border:1px solid #ddd4ca;background:#fff;border-radius:10px;padding:9px 12px}.db-master-canvas-toolbar button.active{background:#2b2521;color:#fff}.db-master-canvas-body{display:grid;grid-template-columns:minmax(0,1fr);min-height:500px}.db-master-canvas.is-designing .db-master-canvas-body{grid-template-columns:minmax(0,1fr) 340px}.db-master-canvas-stage{position:relative;min-width:0;overflow:auto;padding:18px}.db-master-canvas-inspector{border-left:1px solid #e6ded5;background:#fffdfa;overflow:auto;max-height:70vh;padding:14px}.db-new-view-popover{width:360px!important}.db-layout-choices{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:7px!important}.db-layout-choices button{min-width:0!important;min-height:68px;padding:9px 6px!important;font-size:10px!important}.db-layout-choices button svg{width:18px!important;height:18px!important}.canvas-element.type-section,.canvas-element.type-shape{overflow:visible}.canvas-element.type-section>.canvas-block-content,.canvas-element.type-shape>.canvas-block-content{position:absolute;inset:0}.atlas-add-grid{align-items:stretch}
+.db-master-canvas.direct-edit .canvas-card-records.is-designing{background:#fffdf9!important;background-image:none!important}
+.canvas-card-panel-section.primary{background:#fffaf3;border-bottom:1px solid #e7ded4}
+.canvas-card-panel-section>p{margin:0;color:#82766b;font-size:10px;line-height:1.35}
+.canvas-card-panel-section.primary>span{color:#4d4138}
+.canvas-card-theme-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.canvas-card-theme-row button,.canvas-card-theme-row select{height:30px;border:1px solid #d9d0c6;border-radius:8px;background:#fff;color:#39332e;padding:0 8px;font:700 10px Arial,sans-serif}
+.canvas-card-theme-list{display:flex;flex-wrap:wrap;gap:5px}
+.canvas-card-theme-list span{display:inline-flex;align-items:center;gap:4px;border:1px solid #e1d8cf;border-radius:999px;padding:3px 5px 3px 8px;background:#fff;font-size:9px;color:#544b43}
+.canvas-card-theme-list button{width:18px;height:18px;border:0;background:transparent;color:#9a463f;padding:0;display:grid;place-items:center}
+.canvas-card-theme-list svg{width:10px;height:10px}
+.canvas-card-design-popover.toolbar-mode{width:min(390px,calc(100vw - 36px))!important;max-height:none!important;background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;padding:0!important;display:grid!important;gap:10px!important;overflow:visible!important}
+.canvas-card-design-popover.toolbar-mode .canvas-card-tool-panel{border:1px solid rgba(45,38,32,.16);border-radius:14px;background:rgba(255,253,249,.97);box-shadow:0 16px 44px rgba(42,33,25,.16);overflow:hidden;max-height:min(62vh,620px);display:grid}
+.canvas-card-tool-panel-scroll{overflow:auto;display:grid}
+.canvas-card-tool-rail{justify-self:center;display:grid;grid-template-columns:repeat(4,56px);gap:10px;padding:10px 14px;border:1px solid #d8cfc4;border-radius:22px;background:#fffdf9;box-shadow:0 14px 34px rgba(42,33,25,.16)}
+.canvas-card-tool-rail button{width:56px;height:44px;border:0;border-radius:14px;background:transparent;color:#70675f;display:grid;place-items:center;padding:0;cursor:pointer}
+.canvas-card-tool-rail button.active,.canvas-card-tool-rail button:hover{background:#f0ebe5;color:#2f2924}
+.canvas-card-tool-rail svg{width:22px;height:22px}
+.canvas-card-layer-list{display:grid;gap:5px}
+.canvas-card-layer-list button{min-height:34px;border:1px solid #e3dbd2;border-radius:8px;background:#fff;color:#514941;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 9px;font-size:10px;font-weight:700;cursor:pointer}
+.canvas-card-layer-list button.active{border-color:#7764d8;background:#f5f1ff;color:#2d2744}
+.canvas-card-layer-list button:hover{border-color:#c9bdb1;background:#fffaf4}
+.canvas-card-layer-list small{font-size:8px;color:#8a7f74;font-weight:600}
+.canvas-card-design-popover.toolbar-mode .canvas-card-property-list{grid-template-columns:1fr!important}
+.canvas-card-design-popover.toolbar-mode .canvas-card-theme-row{grid-template-columns:1fr!important}
+@media(max-width:1100px){.db-master-canvas.direct-edit .canvas-card-design-popover.toolbar-mode{position:sticky!important;right:auto!important;bottom:12px!important;width:min(390px,100%)!important;margin-left:auto!important}}
