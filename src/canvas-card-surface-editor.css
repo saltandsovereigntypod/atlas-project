@@ -1,0 +1,35 @@
+.canvas-card-view{position:relative}
+.canvas-card-records.is-designing{min-height:360px;padding:24px;overflow:auto;background:linear-gradient(rgba(103,91,79,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(103,91,79,.045) 1px,transparent 1px);background-size:20px 20px;border:1px dashed rgba(93,78,64,.22);border-radius:12px}
+.canvas-card-instance.design-preview{cursor:grab}
+.canvas-card-instance.design-preview:active{cursor:grabbing}
+.canvas-card-instance.card-selected{outline:2px solid #6157c8;outline-offset:4px}
+.canvas-card-element{border-radius:inherit}
+.canvas-card-element.selected{outline:2px solid #6157c8;outline-offset:2px;cursor:move}
+.canvas-card-element.selected:before{content:"";position:absolute;inset:-6px;border:1px dashed rgba(97,87,200,.55);border-radius:6px;pointer-events:none}
+.canvas-card-delete{right:-9px;top:-9px;width:18px;height:18px;border:0;border-radius:999px;background:#2f2a26;color:#fff}
+.canvas-card-resize,.canvas-card-frame-resize{position:absolute;right:-7px;bottom:-7px;width:14px;height:14px;border:2px solid #fff;border-radius:4px;background:#6157c8;box-shadow:0 0 0 1px #6157c8;cursor:nwse-resize;z-index:60}
+.canvas-card-frame-resize{right:-8px;bottom:-8px}
+.canvas-card-design-popover{position:sticky;left:14px;bottom:14px;z-index:80;width:min(560px,calc(100% - 28px));margin-top:-2px;padding:9px;border:1px solid rgba(45,38,32,.16);border-radius:10px;background:rgba(255,253,249,.96);box-shadow:0 16px 44px rgba(42,33,25,.16);backdrop-filter:blur(12px);display:grid;gap:8px}
+.canvas-card-popover-head{display:flex;align-items:center;gap:6px}
+.canvas-card-popover-head button,.canvas-card-popover-head select{height:30px;border:1px solid #d9d0c6;border-radius:7px;background:#fff;color:#39332e;padding:0 8px;font:600 10px Arial,sans-serif}
+.canvas-card-popover-head button{display:grid;place-items:center}
+.canvas-card-popover-head button.active{background:#2f2a26;color:#fff;border-color:#2f2a26}
+.canvas-card-popover-head svg{width:13px;height:13px}
+.canvas-card-control-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
+.canvas-card-control-grid.object{grid-template-columns:repeat(8,minmax(0,1fr))}
+.canvas-card-control-grid label{display:grid;gap:3px;min-width:0}
+.canvas-card-control-grid label span{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#756a60}
+.canvas-card-control-grid input{width:100%;height:28px;min-width:0;border:1px solid #d8cfc4;border-radius:6px;background:#fff;padding:3px 5px;font:inherit;color:#2d2823}
+.canvas-card-control-grid input[type=color]{padding:2px}
+.canvas-card-checkline{height:28px;display:flex!important;align-items:center;gap:5px;font-size:10px;color:#4f473f}
+.canvas-card-checkline input{width:auto;height:auto}
+.canvas-card-align-mini{display:flex;gap:4px}
+.canvas-card-align-mini button{width:28px;height:28px;border:1px solid #d8cfc4;border-radius:6px;background:#fff;display:grid;place-items:center}
+.canvas-card-align-mini button.active{background:#2f2a26;color:#fff}
+.canvas-card-align-mini svg{width:12px}
+.canvas-card-remove-object{height:28px;border:1px solid #e1cbc7;border-radius:7px;background:#fff7f5;color:#87453e;display:flex;align-items:center;justify-content:center;gap:4px;font-size:9px}
+.canvas-card-remove-object svg{width:11px}
+.db-master-canvas-body{grid-template-columns:minmax(0,1fr)!important}
+.db-master-canvas-stage{padding:18px;min-height:520px}
+.db-master-canvas.is-designing .db-master-canvas-stage{background:#fbf8f2}
+@media(max-width:900px){.canvas-card-control-grid,.canvas-card-control-grid.object{grid-template-columns:repeat(3,minmax(0,1fr))}.canvas-card-design-popover{position:relative;left:auto;bottom:auto;width:100%;margin-top:8px}.canvas-card-popover-head{flex-wrap:wrap}}

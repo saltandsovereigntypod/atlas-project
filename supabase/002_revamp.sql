@@ -6,7 +6,7 @@ create table if not exists public.views (
   id uuid primary key default gen_random_uuid(),
   database_id uuid not null references public.databases(id) on delete cascade,
   name text not null check (char_length(name) between 1 and 120),
-  type text not null check (type in ('table','gallery','board')),
+  type text not null check (type in ('table','gallery','board','canvas')),
   position integer not null default 0,
   config jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
