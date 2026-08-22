@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Search, Sparkles } from 'lucide-react'
-import { getFields } from '../lib/data'
+import { getFields, getRecords } from '../lib/data'
 import { WIDGET_PRESETS } from '../lib/widgetPresets'
-import type { Database, Field } from '../types'
+import type { Database, Field, RecordRow } from '../types'
 import { WIDGET_TYPES } from './AtlasWidget'
 
 type Config = Record<string, any>
 type Props = { config: Config; databases: Database[]; save: (patch: Config) => void }
-const databaseWidgets = new Set(['todo','progress_ring','goal','quote','database_count','database_aggregate','random_record','featured_record','recent_records','upcoming_records','timeline','mini_kanban','mini_table','gallery_strip','quick_add','quick_capture','form','search','dynamic_text','conditional_text'])
+const databaseWidgets = new Set(['todo','progress_ring','goal','quote','database_count','database_aggregate','canvas_card','random_record','featured_record','recent_records','upcoming_records','timeline','mini_kanban','mini_table','gallery_strip','quick_add','quick_capture','form','search','dynamic_text','conditional_text'])
 const labelWidgets = new Set(['digital_clock','calendar','countdown','countup','todo','checklist','counter','progress_ring','goal','habit','daily_focus','sticky_note','quote','greeting','annual_cycle','database_count','database_aggregate','recent_records','upcoming_records','quick_add','form'])
 const presetCategories = ['All','Witchy','Budget','Books','Podcast','Productivity'] as const
 
@@ -15,10 +15,11 @@ export default function WidgetSettings({ config, databases, save }: Props) {
   const type = String(config.widgetType || 'digital_clock')
   const databaseId = String(config.databaseId || '')
   const [fields, setFields] = useState<Field[]>([])
+  const [records, setRecords] = useState<RecordRow[]>([])
   const [presetCategory,setPresetCategory]=useState<(typeof presetCategories)[number]>('All')
   const [presetQuery,setPresetQuery]=useState('')
   const [showPresets,setShowPresets]=useState(false)
-  useEffect(() => { if (!databaseId) { setFields([]); return }; getFields(databaseId).then(setFields).catch(console.error) }, [databaseId])
+  useEffect(() => { if (!databaseId) { setFields([]); setRecords([]); return }; getFields(databaseId).then(setFields).catch(console.error); getRecords(databaseId).then(setRecords).catch(console.error) }, [databaseId])
 
   // The main inspector owns widget fill/text/border now. Keep legacy widget-specific
   // color keys synchronized so older widget renderers and presets respond immediately.
@@ -51,6 +52,7 @@ export default function WidgetSettings({ config, databases, save }: Props) {
 
     <label className="atlas-edit-control"><span>Widget type</span><select value={type} onChange={event => save({ widgetType: event.target.value })}>{sortedTypes.map(([value,label]) => <option value={value} key={value}>{label}</option>)}</select></label>
     {databaseWidgets.has(type) && <label className="atlas-edit-control"><span>Database</span><select value={databaseId} onChange={event => save({ databaseId: event.target.value })}><option value="">None</option>{databases.map(db => <option key={db.id} value={db.id}>{db.name}</option>)}</select></label>}
+    {type === 'canvas_card' && <label className="atlas-edit-control"><span>Record</span><select value={String(config.recordId || '')} onChange={event => save({ recordId:event.target.value })}><option value="">First record</option>{records.map(record => <option key={record.id} value={record.id}>{record.title}</option>)}</select></label>}
     {(type === 'todo' || type === 'progress_ring' || type === 'goal' || type === 'quote') && <label className="atlas-edit-control"><span>Data source</span><select value={String(config.dataMode || 'simple')} onChange={event => save({ dataMode: event.target.value })}><option value="simple">Standalone / manual</option><option value="database">Database</option></select></label>}
     {labelWidgets.has(type) && <label className="atlas-edit-control"><span>Label</span><input value={String(config.label || '')} onChange={event => save({ label: event.target.value })} /></label>}
 
