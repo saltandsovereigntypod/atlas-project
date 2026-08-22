@@ -250,7 +250,8 @@
 .canvas-element.selected .object-drag-chip {
   position: absolute;
   left: 50%;
-  top: -42px;
+  top: auto;
+  bottom: -42px;
   transform: translateX(-50%);
   z-index: 630;
   height: 34px;
