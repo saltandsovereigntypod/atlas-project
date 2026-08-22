@@ -59,6 +59,26 @@
 .atlas-folder-head>.atlas-nav-delete:hover{background:#3a342e;color:#fff}
 .atlas-folder-body{display:grid;gap:1px;padding-left:8px}
 .atlas-tree-actions button svg{width:12px;height:12px}
+.atlas-section-actions{display:flex;align-items:center;gap:3px;margin-left:auto}
+.atlas-section-actions button{width:24px;height:24px;border:0;border-radius:7px;background:transparent;color:#81776d;display:grid;place-items:center;padding:0}
+.atlas-section-actions button:hover{background:#302c27;color:#f7f2eb}
+.atlas-section-actions svg{width:13px;height:13px}
+.atlas-folder-create-form{display:grid;gap:8px;margin:4px 0 8px;padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:#181512;color:#e9ded3}
+.atlas-folder-create-form label{display:grid;gap:5px}
+.atlas-folder-create-form span{font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#8f857a}
+.atlas-folder-create-form input{min-height:32px;border:1px solid #4b433b;border-radius:8px;background:#100e0c;color:#f5efe8;padding:0 8px;font:700 11px Arial,sans-serif;outline:none}
+.atlas-folder-create-form input:focus{border-color:#b9a998;box-shadow:0 0 0 2px rgba(185,169,152,.18)}
+.atlas-folder-create-form>div{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.atlas-folder-create-form button{min-height:29px;border:1px solid #3f3831;border-radius:8px;background:#24201c;color:#d4c9bd;font:800 10px Arial,sans-serif}
+.atlas-folder-create-form button[type=submit]{background:#f4ece2;color:#211d19;border-color:#f4ece2}
+.atlas-nav-edit-input{min-width:0;width:100%;height:24px;border:1px solid #5b5148;border-radius:6px;background:#15120f;color:#fff3e8;padding:0 6px;font:inherit;outline:none}
+.atlas-nav-edit-input:focus{border-color:#d7c9ba;box-shadow:0 0 0 2px rgba(215,201,186,.16)}
+.atlas-page-link-row[draggable=true],.atlas-data-link-row[draggable=true]{cursor:grab}
+.atlas-page-link-row[draggable=true]:active,.atlas-data-link-row[draggable=true]:active{cursor:grabbing}
+.atlas-folder-group.drop-ready .atlas-folder-head{background:#28231e;box-shadow:inset 0 0 0 1px rgba(231,219,205,.18)}
+.atlas-folder-group.drop-ready .atlas-folder-head:hover{background:#383129}
+.atlas-folder-group.drop-ready .atlas-folder-head:after{content:'Drop here';justify-self:end;margin-right:2px;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#a99d91}
+.atlas-page-link-row a span:last-child,.atlas-data-link-row a span:last-child,.atlas-folder-head button span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .db-rating-controls{display:grid;gap:7px;border:1px solid #e1d8ce;border-radius:9px;background:#fffdf9;padding:8px}
 .db-rating-controls small{grid-column:1/-1;color:#867a70;font-size:9px}
 @media(max-width:1100px){.db-master-canvas.direct-edit .canvas-card-design-popover.toolbar-mode{position:sticky!important;right:auto!important;bottom:12px!important;width:min(390px,100%)!important;margin-left:auto!important}}
