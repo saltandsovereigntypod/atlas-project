@@ -302,10 +302,13 @@ export default function UniversalPage({ kind }: { kind: Kind }) {
 function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, record, fields, onRecordChange, onOpenDocument, onSelect, onSave }: { block: PageBlock; page: Page; zoom:number; pageLocked:boolean; selected: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; onSelect: () => void; onSave: (patch: BlockPatch) => void; onDelete: () => void }) {
   const [config, setConfig] = useState<BlockPatch>(block.config)
   useEffect(() => setConfig(block.config), [block.config])
+  const [textEditing,setTextEditing]=useState(false)
+  useEffect(()=>{if(!selected)setTextEditing(false)},[selected])
 
   const locked = Boolean(config.locked)
   const hidden = Boolean(config.hidden)
   const commit = (patch: BlockPatch) => { const next = { ...config, ...patch }; setConfig(next); onSave(patch) }
+  const edgeMoveTypes = ['property','widget','heading','text','callout']
 
   const drag = (event: ReactPointerEvent<HTMLElement>) => {if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin={x:Number(config.x||0),y:Number(config.y||0)};let frame=0,latest={...origin};const apply=()=>{frame=0;setConfig(current=>({...current,...latest}))};beginWorkspacePointerTransaction({event,zoom,onStart:onSelect,onMove:(dx,dy)=>{latest={x:Math.max(0,origin.x+dx),y:Math.max(0,origin.y+dy)};if(!frame)frame=window.requestAnimationFrame(apply)},onCommit:()=>{if(frame)window.cancelAnimationFrame(frame);setConfig(current=>({...current,...latest}));onSave(latest)}})}
   const resize = (edge:ResizeEdge)=>(event:ReactPointerEvent<HTMLElement>)=>{if(locked||pageLocked)return;event.preventDefault();event.stopPropagation();const origin=blockRect({...block,config});let frame=0,latest=origin;const apply=()=>{frame=0;setConfig(current=>({...current,...latest}))};beginWorkspacePointerTransaction({event,zoom,threshold:0,onStart:onSelect,onMove:(dx,dy)=>{latest=resizeRect(origin,edge,dx,dy);if(!frame)frame=window.requestAnimationFrame(apply)},onCommit:()=>{if(frame)window.cancelAnimationFrame(frame);setConfig(current=>({...current,...latest}));onSave({x:latest.x,y:latest.y,width:latest.width,height:latest.height})}})}
@@ -334,17 +337,16 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   } as CSSProperties
 
   return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{const owner=pointerOwner(event.nativeEvent);if(owner==='object'){onSelect();drag(event);return}if(owner==='interactive')onSelect()}}>
-    {selected&&!locked&&!pageLocked&&<>{!['property','widget'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {['property','widget'].includes(block.type)&&<button className="object-drag-chip" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}>Move</button>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
-    <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
+    {selected&&!locked&&!pageLocked&&<>{!edgeMoveTypes.includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {edgeMoveTypes.includes(block.type)&&<><button className="object-drag-chip" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}>Drag to move</button>{(['top','right','bottom','left'] as const).map(edge=><button key={edge} className={`object-edge-move-zone edge-${edge}`} aria-label={`Move ${block.type.replace('_',' ')} from ${edge} edge`} onPointerDown={drag}/>)}</>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
+    <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} textEditing={textEditing} onEditText={()=>{onSelect();setTextEditing(true)}} onStopTextEdit={()=>setTextEditing(false)} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
 }
 
-function BlockContent({ block, page, config, zoom, manipulating, databases, record, fields, onRecordChange, onOpenDocument, save }: { block: PageBlock; page: Page; config: BlockPatch; zoom:number; manipulating: boolean; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; save: (patch: BlockPatch) => void }) {
+function BlockContent({ block, page, config, zoom, manipulating, textEditing, onEditText, onStopTextEdit, databases, record, fields, onRecordChange, onOpenDocument, save }: { block: PageBlock; page: Page; config: BlockPatch; zoom:number; manipulating: boolean; textEditing:boolean; onEditText:()=>void; onStopTextEdit:()=>void; databases: DatabaseType[]; record: RecordRow | null; fields: Field[]; onRecordChange:(record:RecordRow)=>void; onOpenDocument:(id:string)=>void; save: (patch: BlockPatch) => void }) {
   const binding = String(config.systemBinding || '')
   if (block.type === 'heading' || block.type === 'text' || block.type === 'callout') {
-    const Tag = block.type === 'heading' ? 'h2' : 'div'
     const text = binding === 'page_title' ? page.title : String(config.text || '')
-    return <Tag className="canvas-editable-text" contentEditable suppressContentEditableWarning style={{ fontSize: Number(config.fontSize || 17), fontWeight: Number(config.fontWeight || 400), fontFamily: String(config.fontFamily || 'Georgia, serif'), lineHeight: Number(config.lineHeight || 1.2), letterSpacing: Number(config.letterSpacing || 0), textAlign: String(config.textAlign || 'left') as CSSProperties['textAlign'] }} onBlur={event => save({ text: event.currentTarget.textContent || '' })}>{text}</Tag>
+    return <EditableCanvasText tag={block.type === 'heading' ? 'h2' : 'div'} text={text} editing={textEditing} config={config} onEdit={onEditText} onStopEdit={onStopTextEdit} save={save}/>
   }
   if (block.type === 'image') {
     const url = binding === 'page_cover' ? page.cover : String(config.url || '')
@@ -363,6 +365,13 @@ function BlockContent({ block, page, config, zoom, manipulating, databases, reco
   if (block.type === 'shape') return <div className={`canvas-shape-surface shape-${String(config.shapeKind||'rectangle')}`} aria-label={`${String(config.shapeKind||'rectangle')} shape`}/>
   if (block.type === 'widget') return <AtlasWidget config={config} editing={manipulating} databases={databases} save={save} />
   return null
+}
+
+function EditableCanvasText({tag,text,editing,config,onEdit,onStopEdit,save}:{tag:'h2'|'div';text:string;editing:boolean;config:BlockPatch;onEdit:()=>void;onStopEdit:()=>void;save:(patch:BlockPatch)=>void}) {
+  const ref=useRef<HTMLElement|null>(null)
+  useEffect(()=>{if(!editing)return;const node=ref.current;if(!node)return;node.focus();const range=document.createRange();range.selectNodeContents(node);range.collapse(false);const selection=window.getSelection();selection?.removeAllRanges();selection?.addRange(range)},[editing])
+  const Tag=tag
+  return <Tag ref={ref as never} className={`canvas-editable-text ${editing?'is-editing-text':'is-selectable-text'}`} contentEditable={editing} suppressContentEditableWarning style={{ fontSize: Number(config.fontSize || 17), fontWeight: Number(config.fontWeight || 400), fontFamily: String(config.fontFamily || 'Georgia, serif'), lineHeight: Number(config.lineHeight || 1.2), letterSpacing: Number(config.letterSpacing || 0), textAlign: String(config.textAlign || 'left') as CSSProperties['textAlign'] }} onDoubleClick={event=>{event.stopPropagation();onEdit()}} onBlur={event => {save({ text: event.currentTarget.textContent || '' });onStopEdit()}}>{text}</Tag>
 }
 
 function DocumentCard({id,config,onOpen}:{id:string;config:BlockPatch;onOpen:(id:string)=>void}){

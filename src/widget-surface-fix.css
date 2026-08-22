@@ -250,20 +250,75 @@
 .canvas-element.selected .object-drag-chip {
   position: absolute;
   left: 50%;
-  top: -34px;
+  top: -42px;
   transform: translateX(-50%);
   z-index: 630;
-  height: 26px;
-  min-width: 52px;
+  height: 34px;
+  min-width: 124px;
+  padding: 0 16px;
   border: 1px solid #d8cec2;
   border-radius: 999px;
   background: rgba(255,253,249,.96);
   color: #4f473f;
   box-shadow: 0 8px 22px rgba(35,28,22,.14);
   cursor: grab;
-  font: 700 11px/1 system-ui, sans-serif;
+  font: 700 12px/1 system-ui, sans-serif;
 }
 
 .canvas-element.selected .object-drag-chip:active {
   cursor: grabbing;
+}
+
+.canvas-element.selected .object-edge-move-zone {
+  position: absolute;
+  z-index: 605;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  padding: 0;
+  cursor: grab;
+}
+
+.canvas-element.selected .object-edge-move-zone:active {
+  cursor: grabbing;
+}
+
+.canvas-element.selected .object-edge-move-zone.edge-top {
+  left: 18px;
+  right: 18px;
+  top: -18px;
+  height: 36px;
+}
+
+.canvas-element.selected .object-edge-move-zone.edge-bottom {
+  left: 18px;
+  right: 18px;
+  bottom: -18px;
+  height: 36px;
+}
+
+.canvas-element.selected .object-edge-move-zone.edge-left {
+  left: -18px;
+  top: 18px;
+  bottom: 18px;
+  width: 36px;
+}
+
+.canvas-element.selected .object-edge-move-zone.edge-right {
+  right: -18px;
+  top: 18px;
+  bottom: 18px;
+  width: 36px;
+}
+
+.canvas-element .canvas-editable-text.is-selectable-text {
+  cursor: default !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.canvas-element .canvas-editable-text.is-editing-text {
+  cursor: text !important;
+  user-select: text;
+  -webkit-user-select: text;
 }
