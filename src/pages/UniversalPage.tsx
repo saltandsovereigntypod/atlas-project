@@ -333,7 +333,7 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
     '--atlas-divider-color':String(config.dividerColor||config.background||config.textColor||'#2e2925'),
   } as CSSProperties
 
-  return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(pointerOwner(event.nativeEvent)==='object'){onSelect();drag(event)}}}>
+  return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{const owner=pointerOwner(event.nativeEvent);if(owner==='object'){onSelect();drag(event);return}if(owner==='interactive')onSelect()}}>
     {selected&&!locked&&!pageLocked&&<>{!['property','widget'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
     <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
