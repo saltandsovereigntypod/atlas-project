@@ -255,7 +255,7 @@
 }
 
 /* Keep body cells clipped for very narrow columns, but headers must stay visible so their popovers can escape the cell. */
-.db-sheet td:not(.db-row-index):not(.db-actions-column){
+.db-sheet td:not(.db-select-column):not(.db-row-index):not(.db-actions-column){
   overflow:hidden;
 }
 
@@ -311,7 +311,7 @@
 }
 
 .db-sheet th.db-field-header,
-.db-sheet td:not(.db-row-index):not(.db-actions-column):not(.db-add-field-column),
+.db-sheet td:not(.db-select-column):not(.db-row-index):not(.db-actions-column):not(.db-add-field-column),
 .db-sheet th.db-title-column,
 .db-sheet td.db-title-column{
   padding-left:0!important;

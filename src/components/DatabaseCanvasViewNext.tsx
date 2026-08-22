@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Database } from 'lucide-react'
 import LegacyDatabaseCanvasView from './DatabaseCanvasViewLegacy'
-import CanvasCardView, { ensureCanvasCardTemplate, type CanvasCardRecordLayout } from './CanvasCardView'
+import CanvasCardView, { ensureCanvasCardTemplate, isCanvasCardTemplate, type CanvasCardRecordLayout } from './CanvasCardView'
 import { createRecord, getFields, getRecords, updateRecord } from '../lib/data'
 import type { Database as DatabaseType, Field, RecordRow } from '../types'
 
@@ -26,6 +26,7 @@ function CanvasMode({config,editing,zoom=1,save}:Props){
  const usableFields=fields.filter(field=>field.name.trim().toLowerCase()!=='name')
  const shown=useMemo(()=>{let next=[...records];const filter=usableFields.find(field=>field.id===filterFieldId);if(filter&&filterValue.trim())next=next.filter(record=>match(record.data?.[filter.id],filter.type,filterValue));const sort=usableFields.find(field=>field.id===sortFieldId);if(sort)next.sort((a,b)=>compare(a.data?.[sort.id],b.data?.[sort.id],sort.type)*(sortDirection==='desc'?-1:1));return next.slice(0,Number(config.limit||24))},[records,usableFields,filterFieldId,filterValue,sortFieldId,sortDirection,config.limit])
  const template=ensureCanvasCardTemplate(config.canvasCardTemplate,usableFields)
+ useEffect(()=>{if(databaseId&&usableFields.length&&!isCanvasCardTemplate(config.canvasCardTemplate))save({canvasCardTemplate:template})},[databaseId,usableFields.length])
  const layouts=(config.canvasCardRecordLayouts&&typeof config.canvasCardRecordLayouts==='object'?config.canvasCardRecordLayouts:{}) as Record<string,CanvasCardRecordLayout>
  const patchRecord=async(record:RecordRow,fieldId:string,value:unknown)=>{const next=await updateRecord(record.id,{data:{...record.data,[fieldId]:value}});setRecords(items=>items.map(item=>item.id===next.id?next:item))}
  const createHere=async()=>{if(!databaseId||creating)return;setCreating(true);try{await createRecord(databaseId,'Untitled');await reload()}finally{setCreating(false)}}

@@ -15,6 +15,14 @@
 .canvas-card-popover-head button{display:grid;place-items:center}
 .canvas-card-popover-head button.active{background:#2f2a26;color:#fff;border-color:#2f2a26}
 .canvas-card-popover-head svg{width:13px;height:13px}
+.canvas-card-property-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:5px;padding:6px;border:1px solid rgba(45,38,32,.1);border-radius:8px;background:#fbf8f3}
+.canvas-card-property-list>span{grid-column:1/-1;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#7b7066}
+.canvas-card-property-list label{min-width:0;min-height:28px;display:flex;align-items:center;gap:6px;padding:3px 6px;border:1px solid transparent;border-radius:7px;color:#4e463f;background:#fff}
+.canvas-card-property-list label.active{border-color:#d8d0c7;background:#f2eee8}
+.canvas-card-property-list input{width:auto;height:auto;margin:0;accent-color:#6157c8}
+.canvas-card-property-list strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:650}
+.canvas-card-property-list button{margin-left:auto;height:20px;border:0;border-radius:5px;background:transparent;color:#655b84;font-size:8px;font-weight:700;cursor:pointer}
+.canvas-card-property-list button:hover{background:#e8e2dc}
 .canvas-card-control-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end}
 .canvas-card-control-grid.object{grid-template-columns:repeat(8,minmax(0,1fr))}
 .canvas-card-control-grid label{display:grid;gap:3px;min-width:0}
