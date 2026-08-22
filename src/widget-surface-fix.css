@@ -76,3 +76,150 @@
   opacity:.45;
   cursor:not-allowed;
 }
+
+.canvas-element.type-widget .atlas-widget-shell .widget-habit button.done {
+  background: var(--widget-accent, #665477) !important;
+  color: var(--widget-surface, #ffffff) !important;
+  border-color: var(--widget-accent, #665477) !important;
+}
+
+.canvas-element.type-widget .atlas-widget-shell .widget-habit button.done svg {
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+.canvas-element.type-widget .atlas-widget-shell .atlas-widget-text-toolbar button {
+  background: color-mix(in srgb, var(--widget-surface, #ffffff) 92%, transparent) !important;
+  color: var(--widget-primary, inherit) !important;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-host {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  min-width: 1ch;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text {
+  cursor: text;
+  outline: none;
+  border-radius: 4px;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent, #665477) 32%, transparent);
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text b,
+.canvas-element.type-widget .atlas-widget-inline-text strong,
+.canvas-element.type-widget .widget-rich-content b,
+.canvas-element.type-widget .widget-rich-content strong {
+  font-weight: 700;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text i,
+.canvas-element.type-widget .atlas-widget-inline-text em,
+.canvas-element.type-widget .widget-rich-content i,
+.canvas-element.type-widget .widget-rich-content em {
+  font-style: italic;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text u,
+.canvas-element.type-widget .widget-rich-content u {
+  text-underline-offset: 2px;
+}
+
+.canvas-element.type-widget .atlas-widget-inline-text blockquote,
+.canvas-element.type-widget .widget-rich-content blockquote {
+  margin: 4px 0;
+  padding: 4px 0 4px 10px;
+  border-left: 3px solid var(--widget-accent, #665477);
+  color: var(--widget-secondary, currentColor);
+}
+
+.canvas-element.type-widget .atlas-widget-text-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.canvas-element.type-widget .atlas-widget-text-toolbar.compact {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 5px);
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--widget-border, #d8cec2);
+  border-radius: 9px;
+  background: var(--widget-surface, #fff);
+  box-shadow: 0 8px 22px rgba(32,27,22,.14);
+}
+
+.canvas-element.type-widget .atlas-widget-text-toolbar button {
+  width: 28px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.canvas-element.type-widget .atlas-widget-text-toolbar svg {
+  width: 14px;
+  height: 14px;
+}
+
+.canvas-element.type-widget .widget-rich-editor {
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+.canvas-element.type-widget .widget-rich-editor.single-line {
+  grid-template-rows: auto auto;
+  align-content: start;
+}
+
+.canvas-element.type-widget .widget-rich-content {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--widget-border, #d8cec2);
+  background: color-mix(in srgb, var(--widget-surface, #fff) 88%, transparent);
+  border-radius: 8px;
+  padding: 7px 9px;
+  color: var(--widget-primary, currentColor);
+  font: inherit;
+  line-height: 1.35;
+  outline: none;
+  white-space: pre-wrap;
+}
+
+.canvas-element.type-widget .widget-rich-editor.single-line .widget-rich-content {
+  min-height: 36px;
+  overflow: hidden;
+}
+
+.canvas-element.type-widget .widget-rich-content:focus {
+  border-color: var(--widget-accent, #665477);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--widget-accent, #665477) 24%, transparent);
+}
+
+.canvas-element.type-widget .widget-editable.rich {
+  min-height: 0;
+}
+
+.canvas-element.type-widget .widget-editable.rich .atlas-widget-inline-host:first-child {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.canvas-element.type-widget .widget-list > .atlas-widget-inline-host:first-child strong {
+  font-size: 15px;
+}
