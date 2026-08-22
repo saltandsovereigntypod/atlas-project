@@ -91,6 +91,7 @@
 .canvas-element.type-widget .atlas-widget-shell .atlas-widget-text-toolbar button {
   background: color-mix(in srgb, var(--widget-surface, #ffffff) 92%, transparent) !important;
   color: var(--widget-primary, inherit) !important;
+  border-color: var(--widget-border, #d8cec2) !important;
 }
 
 .canvas-element.type-widget .atlas-widget-inline-host {
@@ -142,6 +143,8 @@
   align-items: center;
   gap: 4px;
   margin-bottom: 6px;
+  position: relative;
+  z-index: 2;
 }
 
 .canvas-element.type-widget .atlas-widget-text-toolbar.compact {
@@ -158,12 +161,15 @@
 }
 
 .canvas-element.type-widget .atlas-widget-text-toolbar button {
-  width: 28px;
-  height: 26px;
+  flex: 0 0 28px;
+  width: 28px !important;
+  height: 26px !important;
+  min-width: 28px;
   border-radius: 7px;
   display: grid;
   place-items: center;
   padding: 0;
+  line-height: 1;
 }
 
 .canvas-element.type-widget .atlas-widget-text-toolbar svg {
@@ -173,7 +179,7 @@
 
 .canvas-element.type-widget .widget-rich-editor {
   display: grid;
-  grid-template-rows: auto minmax(0,1fr);
+  grid-template-rows: minmax(0,1fr);
   gap: 4px;
   min-width: 0;
   min-height: 0;
@@ -181,8 +187,16 @@
 }
 
 .canvas-element.type-widget .widget-rich-editor.single-line {
-  grid-template-rows: auto auto;
+  grid-template-rows: auto;
   align-content: start;
+}
+
+.canvas-element.type-widget .widget-rich-editor.is-active {
+  grid-template-rows: auto minmax(0,1fr);
+}
+
+.canvas-element.type-widget .widget-rich-editor.single-line.is-active {
+  grid-template-rows: auto auto;
 }
 
 .canvas-element.type-widget .widget-rich-content {
@@ -198,6 +212,12 @@
   line-height: 1.35;
   outline: none;
   white-space: pre-wrap;
+}
+
+.canvas-element.type-widget .widget-rich-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--widget-muted, #8a7e72);
+  opacity: .75;
 }
 
 .canvas-element.type-widget .widget-rich-editor.single-line .widget-rich-content {
@@ -222,4 +242,33 @@
 
 .canvas-element.type-widget .widget-list > .atlas-widget-inline-host:first-child strong {
   font-size: 15px;
+}
+
+.canvas-element.type-widget .widget-text-log {
+  display: grid;
+  gap: 6px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.canvas-element.type-widget .widget-text-log-entry {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: start;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--widget-border, #d8cec2) 55%, transparent);
+}
+
+.canvas-element.type-widget .widget-text-log-entry .widget-rich-content {
+  min-height: 32px;
+  background: transparent;
+}
+
+.canvas-element.type-widget .widget-text-log-entry > button {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px;
+  padding: 0;
+  border-radius: 7px;
 }
