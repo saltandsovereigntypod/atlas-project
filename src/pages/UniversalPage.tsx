@@ -334,7 +334,7 @@ function CanvasBlock({ block, page, zoom, pageLocked, selected, databases, recor
   } as CSSProperties
 
   return <div data-workspace-object className={`canvas-element ${selected ? 'selected' : ''} ${locked ? 'is-locked' : ''} ${pageLocked?'layout-locked':''} type-${block.type}`} style={style} onContextMenu={event=>{event.preventDefault();onSelect()}} onPointerDown={event=>{if(pointerOwner(event.nativeEvent)==='object'){onSelect();drag(event)}}}>
-    {selected&&!locked&&!pageLocked&&<>{!['property'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
+    {selected&&!locked&&!pageLocked&&<>{!['property','widget'].includes(block.type)&&<button className="object-frame-move-zone" aria-label={`Move ${block.type.replace('_',' ')}`} onPointerDown={drag}/>} {(['n','s','e','w','ne','nw','se','sw'] as ResizeEdge[]).map(edge=><button data-workspace-resize key={edge} className={`object-resize-zone edge-${edge}`} aria-label={`Resize ${edge}`} onPointerDown={resize(edge)}/>)}</>}
     <BlockContent block={block} page={page} config={config} zoom={zoom} manipulating={selected && !locked} databases={databases} record={record} fields={fields} onRecordChange={onRecordChange} onOpenDocument={onOpenDocument} save={commit} />
   </div>
 }
@@ -361,7 +361,7 @@ function BlockContent({ block, page, config, zoom, manipulating, databases, reco
   if (block.type === 'progress') return <ProgressDisplay config={config} record={record} fields={fields} />
   if (block.type === 'section') return <div className="canvas-box-surface" aria-label="Decorative box"/>
   if (block.type === 'shape') return <div className={`canvas-shape-surface shape-${String(config.shapeKind||'rectangle')}`} aria-label={`${String(config.shapeKind||'rectangle')} shape`}/>
-  if (block.type === 'widget') return <AtlasWidget config={config} editing={false} databases={databases} save={save} />
+  if (block.type === 'widget') return <AtlasWidget config={config} editing={manipulating} databases={databases} save={save} />
   return null
 }
 
